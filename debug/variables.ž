@@ -1,0 +1,5 @@
+func main() {
+    var greeting = "hello world"
+    var mut laterAssign
+    laterAssign = "hello to \"mark\" C:\\Drive\\neki"
+}
