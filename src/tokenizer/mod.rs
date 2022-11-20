@@ -54,7 +54,9 @@ impl Tokenizer {
         self.len = self.source.len();
 
         while self.index < self.len {
-            let mut ch = self.source.chars().nth(self.index).unwrap();
+            let mut ch = self
+                .get_current()
+                .expect("Something went horribly wrong...");
 
             match ch {
                 '(' => tokens.push(Token {
