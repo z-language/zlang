@@ -1,5 +1,4 @@
 mod parser;
-mod tests;
 mod tokenizer;
 
 use parser::core::Parser;

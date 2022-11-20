@@ -1,0 +1,219 @@
+use crate::tokenizer::{Token, Tokenizer, Type};
+
+#[test]
+fn test_strings_normal() {
+    let mut tokenizer = Tokenizer::new();
+
+    // Its important to note that here I'm escaping the rust's quotes, and not sending the escapes to the parser.
+    let test_case = String::from("\"test\"");
+    let expected = Token {
+        line: 1,
+        pos: 0,
+        value: "test".to_owned(),
+        t_type: Type::String,
+    };
+
+    let got = tokenizer.tokenize(test_case);
+    let token = got.get(0).unwrap().clone();
+    assert_eq!(got.len(), 1); // only one token expected
+    assert_eq!(expected, token);
+}
+
+#[test]
+fn test_string_escapes() {
+    let mut tokenizer = Tokenizer::new();
+
+    let test_case = String::from("\"\\\"\\\"test\\\"\\\"\\\\\"");
+    let expected = Token {
+        line: 1,
+        pos: 0,
+        value: "\"\"test\"\"\\".to_owned(),
+        t_type: Type::String,
+    };
+
+    let got = tokenizer.tokenize(test_case);
+    let token = got.get(0).unwrap().clone();
+    assert_eq!(got.len(), 1); // only one token expected
+    assert_eq!(expected, token);
+}
+
+#[test]
+fn test_variables() {
+    let mut tokenizer = Tokenizer::new();
+
+    let test_case = String::from(
+        "var ime = \"luka\"
+var mut starost = 13
+var mut assignLater
+assignLater = 14",
+    );
+
+    let got = tokenizer.tokenize(test_case);
+    let expected = get_tokenizer_variable_case();
+    assert_eq!(expected, got);
+}
+
+#[test]
+fn test_math_expr_1() {
+    let mut tokenizer = Tokenizer::new();
+    let test_case = String::from("2 * 3");
+    let expected = vec![
+        Token {
+            line: 1,
+            pos: 0,
+            value: "2".to_owned(),
+            t_type: Type::Number,
+        },
+        Token {
+            line: 1,
+            pos: 2,
+            value: "*".to_owned(),
+            t_type: Type::Op,
+        },
+        Token {
+            line: 1,
+            pos: 4,
+            value: "3".to_owned(),
+            t_type: Type::Number,
+        },
+    ];
+
+    let tokens = tokenizer.tokenize(test_case);
+    assert_eq!(expected, tokens);
+}
+
+#[test]
+fn test_math_expr_2() {
+    // TODO
+    let mut tokenizer = Tokenizer::new();
+    let test_case = String::from("2 - (3 - 4) -");
+
+    let tokens = tokenizer.tokenize(test_case);
+    println!("{:?}", tokens);
+}
+
+fn test_symbols() {} // TODO
+
+#[test]
+#[should_panic]
+fn test_error() {
+    let mut tokenizer = Tokenizer::new();
+    let test_case = String::from("\"unclosed string");
+
+    let tokens = tokenizer.tokenize(test_case);
+    println!("{:?}", tokens);
+}
+
+pub fn get_tokenizer_variable_case() -> Vec<Token> {
+    use super::Type::*;
+    vec![
+        Token {
+            line: 1,
+            pos: 0,
+            value: "var".to_owned(),
+            t_type: Keyword,
+        },
+        Token {
+            line: 1,
+            pos: 4,
+            value: "ime".to_owned(),
+            t_type: Word,
+        },
+        Token {
+            line: 1,
+            pos: 8,
+            value: "=".to_owned(),
+            t_type: Op,
+        },
+        Token {
+            line: 1,
+            pos: 10,
+            value: "luka".to_owned(),
+            t_type: String,
+        },
+        Token {
+            line: 1,
+            pos: 16,
+            value: "\n".to_owned(),
+            t_type: Nl,
+        },
+        Token {
+            line: 2,
+            pos: 0,
+            value: "var".to_owned(),
+            t_type: Keyword,
+        },
+        Token {
+            line: 2,
+            pos: 4,
+            value: "mut".to_owned(),
+            t_type: Keyword,
+        },
+        Token {
+            line: 2,
+            pos: 8,
+            value: "starost".to_owned(),
+            t_type: Word,
+        },
+        Token {
+            line: 2,
+            pos: 16,
+            value: "=".to_owned(),
+            t_type: Op,
+        },
+        Token {
+            line: 2,
+            pos: 18,
+            value: "13".to_owned(),
+            t_type: Number,
+        },
+        Token {
+            line: 2,
+            pos: 20,
+            value: "\n".to_owned(),
+            t_type: Nl,
+        },
+        Token {
+            line: 3,
+            pos: 0,
+            value: "var".to_owned(),
+            t_type: Keyword,
+        },
+        Token {
+            line: 3,
+            pos: 4,
+            value: "mut".to_owned(),
+            t_type: Keyword,
+        },
+        Token {
+            line: 3,
+            pos: 8,
+            value: "assignLater".to_owned(),
+            t_type: Word,
+        },
+        Token {
+            line: 3,
+            pos: 19,
+            value: "\n".to_owned(),
+            t_type: Nl,
+        },
+        Token {
+            line: 4,
+            pos: 0,
+            value: "assignLater".to_owned(),
+            t_type: Word,
+        },
+        Token {
+            line: 4,
+            pos: 12,
+            value: "=".to_owned(),
+            t_type: Op,
+        },
+        Token {
+            line: 4,
+            pos: 14,
+            value: "14".to_owned(),
+            t_type: Number,
+        },
+    ]
+}

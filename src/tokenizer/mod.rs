@@ -1,3 +1,6 @@
+mod test_cases;
+mod tokenizer_tests;
+
 pub struct Tokenizer {
     source: String,
     line: u32,
