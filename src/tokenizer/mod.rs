@@ -1,4 +1,3 @@
-mod test_cases;
 mod tokenizer_tests;
 
 pub struct Tokenizer {
