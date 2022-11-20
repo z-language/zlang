@@ -56,43 +56,106 @@ assignLater = 14",
 #[test]
 fn test_math_expr_1() {
     let mut tokenizer = Tokenizer::new();
-    let test_case = String::from("2 * 3");
+    let test_case = String::from("2.5 * 3.75");
     let expected = vec![
         Token {
             line: 1,
             pos: 0,
-            value: "2".to_owned(),
+            value: "2.5".to_owned(),
             t_type: Type::Number,
         },
         Token {
             line: 1,
-            pos: 2,
+            pos: 4,
             value: "*".to_owned(),
             t_type: Type::Op,
         },
         Token {
             line: 1,
-            pos: 4,
-            value: "3".to_owned(),
+            pos: 6,
+            value: "3.75".to_owned(),
             t_type: Type::Number,
         },
     ];
 
     let tokens = tokenizer.tokenize(test_case);
+
     assert_eq!(expected, tokens);
 }
 
 #[test]
 fn test_math_expr_2() {
-    // TODO
     let mut tokenizer = Tokenizer::new();
-    let test_case = String::from("2 - (3 - 4) -");
+    let test_case = String::from("(3 - 45) -");
 
     let tokens = tokenizer.tokenize(test_case);
-    println!("{:?}", tokens);
+    let expected = vec![
+        Token {
+            line: 1,
+            pos: 0,
+            value: "(".to_owned(),
+            t_type: Type::Lparen,
+        },
+        Token {
+            line: 1,
+            pos: 1,
+            value: "3".to_owned(),
+            t_type: Type::Number,
+        },
+        Token {
+            line: 1,
+            pos: 3,
+            value: "-".to_owned(),
+            t_type: Type::Op,
+        },
+        Token {
+            line: 1,
+            pos: 5,
+            value: "45".to_owned(),
+            t_type: Type::Number,
+        },
+        Token {
+            line: 1,
+            pos: 7,
+            value: ")".to_owned(),
+            t_type: Type::Rparen,
+        },
+        Token {
+            line: 1,
+            pos: 9,
+            value: "-".to_owned(),
+            t_type: Type::Op,
+        },
+    ];
+
+    assert_eq!(expected, tokens);
 }
 
-fn test_symbols() {} // TODO
+#[test]
+#[should_panic]
+fn test_decimal_error() {
+    let mut tokenizer = Tokenizer::new();
+    let test_case = String::from("5.34.7");
+
+    tokenizer.tokenize(test_case);
+}
+
+#[test]
+fn test_symbols() {
+    let mut tokenizer = Tokenizer::new();
+    let test_case = String::from("->");
+
+    let expected = vec![Token {
+        line: 1,
+        pos: 0,
+        value: "->".to_owned(),
+        t_type: Type::Arrow,
+    }];
+
+    let tokens = tokenizer.tokenize(test_case);
+
+    assert_eq!(expected, tokens);
+}
 
 #[test]
 #[should_panic]

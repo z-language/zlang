@@ -126,15 +126,7 @@ impl Tokenizer {
                         current = match self.get_current() {
                             Some(chr) => chr,
                             None => {
-                                self.throw(
-                                    "String doesn't have a closing bracket...",
-                                    Token {
-                                        line: self.line,
-                                        pos: self.pos,
-                                        value: "a".to_owned(),
-                                        t_type: Type::Nl,
-                                    },
-                                );
+                                self.throw("String doesn't have a closing bracket.");
                                 '0' // here just so that the compiler doesn't complain
                             }
                         }
@@ -202,7 +194,14 @@ impl Tokenizer {
             if ch.is_digit(10) {
                 let mut content = String::new();
                 let pos = self.pos;
-                while ch.is_digit(10) {
+                let mut had_point = false;
+                while ch.is_digit(10) || ch == '.' {
+                    if ch == '.' {
+                        if had_point {
+                            self.throw("A number can only have one decimal point.");
+                        }
+                        had_point = true;
+                    }
                     content.push(ch);
 
                     self.incr();
@@ -271,40 +270,9 @@ impl Tokenizer {
         self.source.chars().nth(n)
     }
 
-    // TODO: improve
-    fn highlight(&self, tok: Token) {
-        for (i, line) in self.source.split("\n").enumerate() {
-            let diff = tok.line.abs_diff(i as u32);
-
-            if diff < 3 {
-                println!("{}| {}", i + 1, line);
-            }
-
-            if diff == 0 {
-                let spaces = " ".repeat(tok.pos as usize + 2);
-                let arrows_num = match tok.t_type {
-                    Type::Keyword => tok.value.len(),
-                    Type::Word => tok.value.len(),
-                    Type::Number => tok.value.len(),
-                    Type::Op => tok.value.len(),
-
-                    Type::Lparen => 1,
-                    Type::Rparen => 1,
-                    Type::Lbrack => 1,
-                    Type::Rbrack => 1,
-
-                    _ => 1,
-                };
-                println!("{}{}", spaces, "^".repeat(arrows_num));
-            }
-        }
-    }
-
-    fn throw(&self, message: &str, tok: Token) {
+    fn throw(&self, message: &str) {
         eprintln!("Tokenizer error: {}", message);
         println!();
-
-        self.highlight(tok);
 
         panic!()
     }

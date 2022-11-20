@@ -1,6 +1,6 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Module {
-    body: Vec<Node>,
+    pub body: Vec<Node>,
 }
 
 impl Module {
@@ -9,44 +9,44 @@ impl Module {
     }
 }
 
-#[derive(Debug)]
-struct FunctionDef {
-    name: String,
-    args: Vec<Node>,
-    body: Vec<Node>,
-    returns: Box<Node>,
+#[derive(Debug, PartialEq)]
+pub struct FunctionDef {
+    pub name: String,
+    pub args: Vec<Node>,
+    pub body: Vec<Node>,
+    pub returns: Box<Node>,
 }
-#[derive(Debug)]
-struct Assign {
-    target: Box<Node>,
-    value: Box<Node>,
+#[derive(Debug, PartialEq)]
+pub struct Assign {
+    pub target: Box<Node>,
+    pub value: Box<Node>,
 }
-#[derive(Debug)]
-struct Constant {
-    value: Primitive,
+#[derive(Debug, PartialEq)]
+pub struct Constant {
+    pub value: Primitive,
 }
-#[derive(Debug)]
-struct BinOp {
-    left: Box<Node>,
-    op: Operator,
-    right: Box<Node>,
+#[derive(Debug, PartialEq)]
+pub struct BinOp {
+    pub left: Box<Node>,
+    pub op: Operator,
+    pub right: Box<Node>,
 }
-#[derive(Debug)]
-struct Name {
-    id: String,
+#[derive(Debug, PartialEq)]
+pub struct Name {
+    pub id: String,
 }
 
-#[derive(Debug)]
-struct Expr {
-    value: Box<Node>,
+#[derive(Debug, PartialEq)]
+pub struct Expr {
+    pub value: Box<Node>,
 }
-#[derive(Debug)]
-struct Call {
-    func: Name,
-    args: Vec<Node>,
+#[derive(Debug, PartialEq)]
+pub struct Call {
+    pub func: Name,
+    pub args: Vec<Node>,
 }
-#[derive(Debug)]
-enum Node {
+#[derive(Debug, PartialEq)]
+pub enum Node {
     FunctionDef(FunctionDef),
     Assign(Assign),
     Constant(Constant),
@@ -54,18 +54,20 @@ enum Node {
     Name(Name),
     Expr(Expr),
     Call(Call),
+
+    None,
 }
 
-#[derive(Debug)]
-enum Primitive {
-    Int,
-    Float,
-    Str,
-    Bool,
+#[derive(Debug, PartialEq)]
+pub enum Primitive {
+    Int(isize),
+    Float(f64),
+    Str(String),
+    Bool(bool),
 }
 
-#[derive(Debug)]
-enum Operator {
+#[derive(Debug, PartialEq)]
+pub enum Operator {
     Add,
     Sub,
     Mult,
