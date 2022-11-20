@@ -1,13 +1,47 @@
 {
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceRoot}/target/debug/žlang",
+            "name": "Debug executable 'zlang'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=zlang",
+                    "--package=zlang"
+                ],
+                "filter": {
+                    "name": "zlang",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "debug/variables.ž"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'zlang'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=zlang",
+                    "--package=zlang"
+                ],
+                "filter": {
+                    "name": "zlang",
+                    "kind": "bin"
+                }
+            },
             "args": [],
-            "cwd": "${workspaceRoot}",
+            "cwd": "${workspaceFolder}"
         }
     ]
 }
