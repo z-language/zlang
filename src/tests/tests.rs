@@ -1,5 +1,6 @@
+#[cfg(test)]
 mod tokenizer_tests {
-    use crate::tokenizer::{Token, Tokenizer, Type};
+    use crate::tokenizer::{self, Token, Tokenizer, Type};
 
     #[test]
     fn test_strings_normal() {
@@ -54,8 +55,60 @@ assignLater = 14",
         let expected = get_tokenizer_variable_case();
         assert_eq!(expected, got);
     }
+
+    #[test]
+    fn test_math_expr_1() {
+        let mut tokenizer = Tokenizer::new();
+        let test_case = String::from("2 * 3");
+        let expected = vec![
+            Token {
+                line: 1,
+                pos: 0,
+                value: "2".to_owned(),
+                t_type: Type::Number,
+            },
+            Token {
+                line: 1,
+                pos: 2,
+                value: "*".to_owned(),
+                t_type: Type::Op,
+            },
+            Token {
+                line: 1,
+                pos: 4,
+                value: "3".to_owned(),
+                t_type: Type::Number,
+            },
+        ];
+
+        let tokens = tokenizer.tokenize(test_case);
+        assert_eq!(expected, tokens);
+    }
+
+    #[test]
+    fn test_math_expr_2() {
+        // TODO
+        let mut tokenizer = Tokenizer::new();
+        let test_case = String::from("2 - (3 - 4) -");
+
+        let tokens = tokenizer.tokenize(test_case);
+        println!("{:?}", tokens);
+    }
+
+    fn test_symbols() {} // TODO
+
+    #[test]
+    #[should_panic]
+    fn test_error() {
+        let mut tokenizer = Tokenizer::new();
+        let test_case = String::from("\"unclosed string");
+
+        let tokens = tokenizer.tokenize(test_case);
+        println!("{:?}", tokens);
+    }
 }
 
+#[cfg(test)]
 mod parser_tests {
     #[test]
     // testing the test

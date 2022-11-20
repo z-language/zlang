@@ -93,7 +93,9 @@ impl Tokenizer {
                 }
                 '"' => {
                     self.incr();
-                    let mut current = self.get_current();
+                    let mut current = self
+                        .get_current()
+                        .expect("Souldn't fail because it just gets the char we matched on.");
                     let mut escaped = false;
                     let mut word = String::new();
                     let mut len = 1;
@@ -109,12 +111,31 @@ impl Tokenizer {
                             escaped = false;
                         }
 
-                        if current != '\\' || self.get_offset(-1) == '\\' {
+                        if current != '\\'
+                            || self
+                                .get_offset(-1)
+                                .expect("It gets the previous char which definetly exists.")
+                                == '\\'
+                        {
                             word.push(current);
                         }
                         len += 1;
                         self.incr();
-                        current = self.get_current();
+                        current = match self.get_current() {
+                            Some(chr) => chr,
+                            None => {
+                                self.throw(
+                                    "String doesn't have a closing bracket...",
+                                    Token {
+                                        line: self.line,
+                                        pos: self.pos,
+                                        value: "a".to_owned(),
+                                        t_type: Type::Nl,
+                                    },
+                                );
+                                '0' // here just so that the compiler doesn't complain
+                            }
+                        }
                     }
                     tokens.push(Token {
                         line: self.line,
@@ -146,9 +167,15 @@ impl Tokenizer {
                     value: "*".to_string(),
                     t_type: Type::Op,
                 }),
+                '/' => tokens.push(Token {
+                    line: self.line,
+                    pos: self.pos,
+                    value: "/".to_string(),
+                    t_type: Type::Op,
+                }),
 
                 '-' => {
-                    if self.get_offset((self.index + 1) as isize) == '>' {
+                    if self.get_offset((self.index + 1) as isize).unwrap_or('\r') == '>' {
                         tokens.push(Token {
                             line: self.line,
                             pos: self.pos,
@@ -177,10 +204,12 @@ impl Tokenizer {
                     content.push(ch);
 
                     self.incr();
-                    if self.is_eof() {
+
+                    if let Some(chr) = self.get_current() {
+                        ch = chr;
+                    } else {
                         break;
                     }
-                    ch = self.get_current();
                 }
 
                 self.decr();
@@ -200,10 +229,12 @@ impl Tokenizer {
                     content.push(ch);
 
                     self.incr();
-                    if self.is_eof() {
+
+                    if let Some(chr) = self.get_current() {
+                        ch = chr;
+                    } else {
                         break;
                     }
-                    ch = self.get_current();
                 }
 
                 self.decr();
@@ -226,19 +257,54 @@ impl Tokenizer {
         tokens
     }
 
-    fn get_current(&self) -> char {
-        self.source.chars().nth(self.index).unwrap()
+    fn get_current(&self) -> Option<char> {
+        self.get_nth(self.index)
     }
 
-    fn get_offset(&self, offset: isize) -> char {
-        self.source
-            .chars()
-            .nth(((self.index as isize) + offset) as usize)
-            .unwrap()
+    fn get_offset(&self, offset: isize) -> Option<char> {
+        self.get_nth(((self.index as isize) + offset) as usize)
     }
 
-    fn is_eof(&self) -> bool {
-        self.index >= self.len
+    fn get_nth(&self, n: usize) -> Option<char> {
+        self.source.chars().nth(n)
+    }
+
+    // TODO: improve
+    fn highlight(&self, tok: Token) {
+        for (i, line) in self.source.split("\n").enumerate() {
+            let diff = tok.line.abs_diff(i as u32);
+
+            if diff < 3 {
+                println!("{}| {}", i + 1, line);
+            }
+
+            if diff == 0 {
+                let spaces = " ".repeat(tok.pos as usize + 2);
+                let arrows_num = match tok.t_type {
+                    Type::Keyword => tok.value.len(),
+                    Type::Word => tok.value.len(),
+                    Type::Number => tok.value.len(),
+                    Type::Op => tok.value.len(),
+
+                    Type::Lparen => 1,
+                    Type::Rparen => 1,
+                    Type::Lbrack => 1,
+                    Type::Rbrack => 1,
+
+                    _ => 1,
+                };
+                println!("{}{}", spaces, "^".repeat(arrows_num));
+            }
+        }
+    }
+
+    fn throw(&self, message: &str, tok: Token) {
+        eprintln!("Tokenizer error: {}", message);
+        println!();
+
+        self.highlight(tok);
+
+        panic!()
     }
 
     fn incr(&mut self) {
