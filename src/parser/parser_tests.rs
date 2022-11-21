@@ -4,7 +4,7 @@ use super::{ast::*, core::Parser};
 
 #[test]
 fn test_constant_expr() {
-    let parser = Parser::new();
+    let mut parser = Parser::new();
     let test_case = String::from("3");
 
     let ast = parser.parse(get_tokens(test_case));

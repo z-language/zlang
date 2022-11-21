@@ -23,6 +23,7 @@ pub enum Type {
 
     Op,
     Arrow,
+    Diacritic,
 
     String,
     Number,
@@ -143,6 +144,13 @@ impl Tokenizer {
 
                 ' ' => (),
 
+                ':' => tokens.push(Token {
+                    line: self.line,
+                    pos: self.pos,
+                    value: ":".to_owned(),
+                    t_type: Type::Diacritic,
+                }),
+
                 '+' => tokens.push(Token {
                     line: self.line,
                     pos: self.pos,
@@ -171,7 +179,7 @@ impl Tokenizer {
                 }),
 
                 '-' => {
-                    if self.get_offset((self.index + 1) as isize).unwrap_or('\r') == '>' {
+                    if self.get_offset(1).unwrap_or('\r') == '>' {
                         tokens.push(Token {
                             line: self.line,
                             pos: self.pos,
@@ -291,7 +299,11 @@ impl Tokenizer {
 }
 
 fn is_keyword(word: &String) -> bool {
-    if ["proc", "var", "mut", "return", "if", "elif", "else"].contains(&word.as_str()) {
+    if [
+        "fun", "var", "mut", "return", "if", "elif", "else", "int", "float",
+    ]
+    .contains(&word.as_str())
+    {
         return true;
     }
     return false;

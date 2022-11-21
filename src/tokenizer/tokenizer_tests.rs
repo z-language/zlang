@@ -38,6 +38,49 @@ fn test_string_escapes() {
 }
 
 #[test]
+fn test_keywords() {
+    let mut tokenizer = Tokenizer::new();
+
+    let test_case = String::from("int float var mut fun");
+    let expected = vec![
+        Token {
+            line: 1,
+            pos: 0,
+            value: "int".to_owned(),
+            t_type: Type::Keyword,
+        },
+        Token {
+            line: 1,
+            pos: 4,
+            value: "float".to_owned(),
+            t_type: Type::Keyword,
+        },
+        Token {
+            line: 1,
+            pos: 10,
+            value: "var".to_owned(),
+            t_type: Type::Keyword,
+        },
+        Token {
+            line: 1,
+            pos: 14,
+            value: "mut".to_owned(),
+            t_type: Type::Keyword,
+        },
+        Token {
+            line: 1,
+            pos: 18,
+            value: "fun".to_owned(),
+            t_type: Type::Keyword,
+        },
+    ];
+
+    let got = tokenizer.tokenize(test_case);
+
+    assert_eq!(expected, got);
+}
+
+#[test]
 fn test_variables() {
     let mut tokenizer = Tokenizer::new();
 
@@ -143,14 +186,28 @@ fn test_decimal_error() {
 #[test]
 fn test_symbols() {
     let mut tokenizer = Tokenizer::new();
-    let test_case = String::from("->");
+    let test_case = String::from("-> -> :");
 
-    let expected = vec![Token {
-        line: 1,
-        pos: 0,
-        value: "->".to_owned(),
-        t_type: Type::Arrow,
-    }];
+    let expected = vec![
+        Token {
+            line: 1,
+            pos: 0,
+            value: "->".to_owned(),
+            t_type: Type::Arrow,
+        },
+        Token {
+            line: 1,
+            pos: 3,
+            value: "->".to_owned(),
+            t_type: Type::Arrow,
+        },
+        Token {
+            line: 1,
+            pos: 6,
+            value: ":".to_owned(),
+            t_type: Type::Diacritic,
+        },
+    ];
 
     let tokens = tokenizer.tokenize(test_case);
 
