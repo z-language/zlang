@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Keyword,
     Word,
@@ -13,7 +13,7 @@ pub enum Type {
 
     Op,
     Arrow,
-    Diacritic,
+    DoubleDot,
 
     String,
     Number,

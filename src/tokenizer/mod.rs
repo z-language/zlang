@@ -1,4 +1,5 @@
 use self::token::{Token, Type};
+use crate::grammar::*;
 
 pub mod token;
 #[cfg(test)]
@@ -35,35 +36,35 @@ impl<'a> Tokenizer<'a> {
                 .expect("Something went horribly wrong...");
 
             match ch {
-                '(' => tokens.push(Token {
+                OPEN_PAREN => tokens.push(Token {
                     line: self.line,
                     pos: self.pos,
-                    value: "(".to_string(),
+                    value: ch.to_string(),
                     t_type: Type::Lparen,
                 }),
-                ')' => tokens.push(Token {
+                CLOSED_PAREN => tokens.push(Token {
                     line: self.line,
                     pos: self.pos,
-                    value: ")".to_string(),
+                    value: ch.to_string(),
                     t_type: Type::Rparen,
                 }),
-                '{' => tokens.push(Token {
+                OPEN_CBR => tokens.push(Token {
                     line: self.line,
                     pos: self.pos,
-                    value: "{".to_string(),
+                    value: ch.to_string(),
                     t_type: Type::Lbrack,
                 }),
-                '}' => tokens.push(Token {
+                CLOSED_CBR => tokens.push(Token {
                     line: self.line,
                     pos: self.pos,
-                    value: "}".to_string(),
+                    value: ch.to_string(),
                     t_type: Type::Rbrack,
                 }),
-                '\n' => {
+                NL => {
                     tokens.push(Token {
                         line: self.line,
                         pos: self.pos,
-                        value: "\n".to_string(),
+                        value: ch.to_string(),
                         t_type: Type::Nl,
                     });
                     self.line += 1;
@@ -71,7 +72,7 @@ impl<'a> Tokenizer<'a> {
                     self.index += 1;
                     continue;
                 }
-                '"' => {
+                DOUBLE_QUOTES => {
                     self.incr();
                     let mut current = self
                         .get_current()
@@ -81,7 +82,7 @@ impl<'a> Tokenizer<'a> {
                     let mut len = 1;
 
                     loop {
-                        if current == '"' && !escaped {
+                        if current == DOUBLE_QUOTES && !escaped {
                             break;
                         }
 
@@ -117,16 +118,17 @@ impl<'a> Tokenizer<'a> {
                     });
                 }
 
-                ' ' => (),
+                SPACE => (),
 
-                ':' => tokens.push(Token {
+                DOUBLE_DOT => tokens.push(Token {
                     line: self.line,
                     pos: self.pos,
-                    value: ":".to_owned(),
-                    t_type: Type::Diacritic,
+                    value: ch.to_string(),
+                    t_type: Type::DoubleDot,
                 }),
 
-                '-' if self.get_offset(1).unwrap_or('0') == '>' => {
+                // Matches on arrow
+                MINUS if self.get_offset(1).unwrap_or('0') == GREATER_THAN => {
                     tokens.push(Token {
                         line: self.line,
                         pos: self.pos,
@@ -137,9 +139,10 @@ impl<'a> Tokenizer<'a> {
                     self.incr();
                 }
 
-                '/' if self.get_offset(1).unwrap_or('0') == '/' => {
+                // Matches on a comment
+                FORWARD_SLASH if self.get_offset(1).unwrap_or('0') == FORWARD_SLASH => {
                     let mut current = ch;
-                    while current != '\n' {
+                    while current != NL {
                         self.incr();
                         current = match self.get_current() {
                             Some(chr) => chr,
@@ -148,7 +151,7 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
 
-                '+' | '=' | '*' | '/' | '-' => tokens.push(Token {
+                PLUS | EQUALS | STAR | FORWARD_SLASH | MINUS => tokens.push(Token {
                     line: self.line,
                     pos: self.pos,
                     value: String::from(ch),
@@ -159,8 +162,8 @@ impl<'a> Tokenizer<'a> {
                     let mut content = String::new();
                     let pos = self.pos;
                     let mut had_point = false;
-                    while ch.is_digit(10) || ch == '.' {
-                        if ch == '.' {
+                    while ch.is_digit(10) || ch == DOT {
+                        if ch == DOT {
                             if had_point {
                                 self.throw("A number can only have one decimal point.");
                             }
@@ -256,12 +259,5 @@ impl<'a> Tokenizer<'a> {
 }
 
 fn is_keyword(word: &str) -> bool {
-    if [
-        "fun", "var", "mut", "return", "if", "elif", "else", "int", "float",
-    ]
-    .contains(&word)
-    {
-        return true;
-    }
-    return false;
+    [FUN, VAR, MUT, RETURN, IF, ELSE, INT, FLOAT].contains(&word)
 }

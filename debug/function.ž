@@ -4,7 +4,7 @@ fun sqrt(x: int) -> int {
 }
 
 fun main() {
-  fun foo(ab: float, bc: int) -> float {}
+  fun foo() -> float {}
 
   fun foo2() {}
 }

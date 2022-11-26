@@ -203,7 +203,7 @@ fn test_symbols() {
             line: 1,
             pos: 6,
             value: ":".to_owned(),
-            t_type: Type::Diacritic,
+            t_type: Type::DoubleDot,
         },
     ];
 

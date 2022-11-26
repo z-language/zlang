@@ -3,9 +3,10 @@ use crate::tokenizer::{token::Token, Tokenizer};
 use super::{ast::*, core::Parser};
 
 #[test]
+#[ignore = "not yet implemented"]
 fn test_constant_expr() {
     let mut parser = Parser::new();
-    let test_case = String::from("3");
+    let test_case = "3";
 
     let ast = parser.parse(get_tokens(test_case));
     let expected = Module {
@@ -19,7 +20,29 @@ fn test_constant_expr() {
     assert_eq!(expected, ast);
 }
 
-fn get_tokens(test_case: String) -> Vec<Token> {
+#[test]
+#[ignore = "not yet implemented"]
+fn test_func_def() {
+    let mut parser = Parser::new();
+    let test_case = "
+    fun main() {
+        fun foo() -> float {}
+
+        fun foo2() {}
+    }
+    ";
+    let ast = parser.parse(get_tokens(test_case));
+    let expected = Module {
+        body: vec![Node::FunctionDef(FunctionDef {
+            name: todo!(),
+            args: todo!(),
+            body: todo!(),
+            returns: todo!(),
+        })],
+    };
+}
+
+fn get_tokens(test_case: &str) -> Vec<Token> {
     let mut tokenizer = Tokenizer::new();
-    tokenizer.tokenize(&test_case)
+    tokenizer.tokenize(test_case)
 }
