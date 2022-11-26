@@ -103,7 +103,7 @@ fn test_math_expr_1() {
             line: 1,
             pos: 0,
             value: "2.5".to_owned(),
-            t_type: Type::Number,
+            t_type: Type::Float,
         },
         Token {
             line: 1,
@@ -115,7 +115,7 @@ fn test_math_expr_1() {
             line: 1,
             pos: 6,
             value: "3.75".to_owned(),
-            t_type: Type::Number,
+            t_type: Type::Float,
         },
     ];
 
@@ -141,7 +141,7 @@ fn test_math_expr_2() {
             line: 1,
             pos: 1,
             value: "3".to_owned(),
-            t_type: Type::Number,
+            t_type: Type::Int,
         },
         Token {
             line: 1,
@@ -153,7 +153,7 @@ fn test_math_expr_2() {
             line: 1,
             pos: 5,
             value: "45".to_owned(),
-            t_type: Type::Number,
+            t_type: Type::Int,
         },
         Token {
             line: 1,
@@ -293,7 +293,7 @@ pub fn get_tokenizer_variable_case() -> Vec<Token> {
             line: 2,
             pos: 18,
             value: "13".to_owned(),
-            t_type: Number,
+            t_type: Int,
         },
         Token {
             line: 2,
@@ -341,7 +341,7 @@ pub fn get_tokenizer_variable_case() -> Vec<Token> {
             line: 4,
             pos: 14,
             value: "14".to_owned(),
-            t_type: Number,
+            t_type: Int,
         },
     ]
 }

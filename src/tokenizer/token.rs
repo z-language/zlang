@@ -17,7 +17,8 @@ pub enum Type {
     Comma,
 
     String,
-    Number,
+    Int,
+    Float,
 }
 
 #[derive(Debug, Clone, PartialEq)]

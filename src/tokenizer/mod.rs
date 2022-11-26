@@ -192,7 +192,7 @@ impl<'a> Tokenizer<'a> {
                         line: self.line,
                         pos,
                         value: content,
-                        t_type: Type::Number,
+                        t_type: if had_point { Type::Float } else { Type::Int },
                     })
                 }
 

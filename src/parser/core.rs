@@ -1,4 +1,4 @@
-use super::ast::{Arg, FunctionDef, Module, Name, Node};
+use super::ast::{Arg, Constant, FunctionDef, Module, Name, Node, Primitive};
 use crate::grammar::*;
 use crate::tokenizer::token::{Token, Type};
 
@@ -17,7 +17,7 @@ impl Parser {
         }
     }
 
-    pub fn build_fun(&mut self) -> FunctionDef {
+    fn build_fun(&mut self) -> FunctionDef {
         self.index += 1;
         let name = match self.getttok(0) {
             Some(name) => {
@@ -118,7 +118,32 @@ impl Parser {
         definition
     }
 
-    pub fn parse_node(&mut self, tok: &Token) -> Option<Node> {
+    fn build_constant(&self) -> Constant {
+        let tok = self.getttok(0).unwrap();
+        match tok.t_type {
+            Type::String => Constant {
+                value: Primitive::Str(tok.value),
+            },
+            Type::Int => {
+                let val = tok.value.parse().expect("This shouldn't fail...");
+
+                Constant {
+                    value: Primitive::Int(val),
+                }
+            }
+            Type::Float => {
+                let val = tok.value.parse().expect("This shouldn't fail...");
+
+                Constant {
+                    value: Primitive::Float(val),
+                }
+            }
+
+            _ => todo!(),
+        }
+    }
+
+    fn parse_node(&mut self, tok: &Token) -> Option<Node> {
         match tok.t_type {
             Type::Keyword => match tok.value.as_str() {
                 FUN => Some(Node::FunctionDef(self.build_fun())),
@@ -131,6 +156,8 @@ impl Parser {
                     todo!()
                 }
             },
+            Type::Int | Type::String | Type::Float => Some(Node::Constant(self.build_constant())),
+
             Type::Nl => None,
             _ => {
                 println!("Token failure: {:?}", tok);

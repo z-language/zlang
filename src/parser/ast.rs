@@ -44,10 +44,6 @@ pub struct Name {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Expr {
-    pub value: Box<Node>,
-}
-#[derive(Debug, PartialEq, Clone)]
 pub struct Call {
     pub func: Name,
     pub args: Vec<Node>,
@@ -60,7 +56,6 @@ pub enum Node {
     Constant(Constant),
     BinOp(BinOp),
     Name(Name),
-    Expr(Expr),
     Call(Call),
 
     None,

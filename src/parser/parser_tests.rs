@@ -2,17 +2,14 @@ use super::{ast::*, core::Parser};
 use crate::tokenizer::{token::Token, Tokenizer};
 
 #[test]
-#[ignore = "not yet implemented"]
 fn test_constant_expr() {
     let mut parser = Parser::new();
     let test_case = "3";
 
     let ast = parser.parse(get_tokens(test_case));
     let expected = Module {
-        body: vec![Node::Expr(Expr {
-            value: Box::from(Node::Constant(Constant {
-                value: Primitive::Int(3),
-            })),
+        body: vec![Node::Constant(Constant {
+            value: Primitive::Int(3),
         })],
     };
 
