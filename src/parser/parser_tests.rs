@@ -21,7 +21,6 @@ fn test_constant_expr() {
 }
 
 #[test]
-#[ignore = "not yet implemented"]
 fn test_func_def() {
     let mut parser = Parser::new();
     let test_case = "
@@ -34,12 +33,29 @@ fn test_func_def() {
     let ast = parser.parse(get_tokens(test_case));
     let expected = Module {
         body: vec![Node::FunctionDef(FunctionDef {
-            name: todo!(),
-            args: todo!(),
-            body: todo!(),
-            returns: todo!(),
+            name: "main".to_owned(),
+            args: vec![],
+            body: vec![
+                Node::FunctionDef(FunctionDef {
+                    name: "foo".to_owned(),
+                    args: vec![],
+                    body: vec![],
+                    returns: Box::from(Node::Name(Name {
+                        id: "float".to_owned(),
+                    })),
+                }),
+                Node::FunctionDef(FunctionDef {
+                    name: "foo2".to_owned(),
+                    args: vec![],
+                    body: vec![],
+                    returns: Box::from(Node::None),
+                }),
+            ],
+            returns: Box::from(Node::None),
         })],
     };
+
+    assert_eq!(expected, ast);
 }
 
 fn get_tokens(test_case: &str) -> Vec<Token> {
