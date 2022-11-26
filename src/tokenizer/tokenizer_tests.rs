@@ -213,6 +213,16 @@ fn test_symbols() {
 }
 
 #[test]
+fn test_comments() {
+    let mut tokenizer = Tokenizer::new();
+    let test_case = "// this is a comment";
+
+    let tokens = tokenizer.tokenize(test_case);
+
+    assert!(tokens.is_empty());
+}
+
+#[test]
 #[should_panic]
 fn test_error() {
     let mut tokenizer = Tokenizer::new();

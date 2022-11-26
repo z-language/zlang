@@ -126,95 +126,97 @@ impl<'a> Tokenizer<'a> {
                     t_type: Type::Diacritic,
                 }),
 
-                '+' | '=' | '*' | '/' => tokens.push(Token {
+                '-' if self.get_offset(1).unwrap_or('0') == '>' => {
+                    tokens.push(Token {
+                        line: self.line,
+                        pos: self.pos,
+                        value: "->".to_string(),
+                        t_type: Type::Arrow,
+                    });
+                    self.incr();
+                    self.incr();
+                }
+
+                '/' if self.get_offset(1).unwrap_or('0') == '/' => {
+                    let mut current = ch;
+                    while current != '\n' {
+                        self.incr();
+                        current = match self.get_current() {
+                            Some(chr) => chr,
+                            None => break,
+                        }
+                    }
+                }
+
+                '+' | '=' | '*' | '/' | '-' => tokens.push(Token {
                     line: self.line,
                     pos: self.pos,
                     value: String::from(ch),
                     t_type: Type::Op,
                 }),
 
-                '-' => {
-                    if self.get_offset(1).unwrap_or('\r') == '>' {
-                        tokens.push(Token {
-                            line: self.line,
-                            pos: self.pos,
-                            value: "->".to_string(),
-                            t_type: Type::Arrow,
-                        });
+                case if case.is_digit(10) => {
+                    let mut content = String::new();
+                    let pos = self.pos;
+                    let mut had_point = false;
+                    while ch.is_digit(10) || ch == '.' {
+                        if ch == '.' {
+                            if had_point {
+                                self.throw("A number can only have one decimal point.");
+                            }
+                            had_point = true;
+                        }
+                        content.push(ch);
+
                         self.incr();
-                        continue;
+
+                        if let Some(chr) = self.get_current() {
+                            ch = chr;
+                        } else {
+                            break;
+                        }
                     }
+
+                    self.decr();
 
                     tokens.push(Token {
                         line: self.line,
-                        pos: self.pos,
-                        value: "-".to_string(),
-                        t_type: Type::Op,
-                    });
+                        pos,
+                        value: content,
+                        t_type: Type::Number,
+                    })
                 }
 
-                _ => (),
-            }
+                case if case.is_alphabetic() => {
+                    let mut content = String::new();
+                    let pos = self.pos;
+                    while ch.is_alphanumeric() {
+                        content.push(ch);
 
-            if ch.is_digit(10) {
-                let mut content = String::new();
-                let pos = self.pos;
-                let mut had_point = false;
-                while ch.is_digit(10) || ch == '.' {
-                    if ch == '.' {
-                        if had_point {
-                            self.throw("A number can only have one decimal point.");
+                        self.incr();
+
+                        if let Some(chr) = self.get_current() {
+                            ch = chr;
+                        } else {
+                            break;
                         }
-                        had_point = true;
                     }
-                    content.push(ch);
 
-                    self.incr();
+                    self.decr();
 
-                    if let Some(chr) = self.get_current() {
-                        ch = chr;
-                    } else {
-                        break;
-                    }
+                    tokens.push(Token {
+                        line: self.line,
+                        pos,
+                        t_type: if is_keyword(&content) {
+                            Type::Keyword
+                        } else {
+                            Type::Word
+                        },
+                        value: content,
+                    })
                 }
 
-                self.decr();
-
-                tokens.push(Token {
-                    line: self.line,
-                    pos,
-                    value: content,
-                    t_type: Type::Number,
-                })
-            }
-
-            if ch.is_alphabetic() {
-                let mut content = String::new();
-                let pos = self.pos;
-                while ch.is_alphanumeric() {
-                    content.push(ch);
-
-                    self.incr();
-
-                    if let Some(chr) = self.get_current() {
-                        ch = chr;
-                    } else {
-                        break;
-                    }
-                }
-
-                self.decr();
-
-                tokens.push(Token {
-                    line: self.line,
-                    pos,
-                    t_type: if is_keyword(&content) {
-                        Type::Keyword
-                    } else {
-                        Type::Word
-                    },
-                    value: content,
-                })
+                _ => self.throw(&*format!("Unexpected char: {}", ch)),
             }
 
             self.incr();
