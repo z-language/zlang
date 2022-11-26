@@ -14,6 +14,7 @@ pub enum Type {
     Op,
     Arrow,
     DoubleDot,
+    Comma,
 
     String,
     Number,

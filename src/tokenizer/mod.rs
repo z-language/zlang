@@ -60,6 +60,12 @@ impl<'a> Tokenizer<'a> {
                     value: ch.to_string(),
                     t_type: Type::Rbrack,
                 }),
+                COMMA => tokens.push(Token {
+                    line: self.line,
+                    pos: self.pos,
+                    value: ch.to_string(),
+                    t_type: Type::Comma,
+                }),
                 NL => {
                     tokens.push(Token {
                         line: self.line,
@@ -120,7 +126,7 @@ impl<'a> Tokenizer<'a> {
 
                 SPACE => (),
 
-                DOUBLE_DOT => tokens.push(Token {
+                COLON => tokens.push(Token {
                     line: self.line,
                     pos: self.pos,
                     value: ch.to_string(),

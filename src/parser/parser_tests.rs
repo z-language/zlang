@@ -1,6 +1,5 @@
-use crate::tokenizer::{token::Token, Tokenizer};
-
 use super::{ast::*, core::Parser};
+use crate::tokenizer::{token::Token, Tokenizer};
 
 #[test]
 #[ignore = "not yet implemented"]
@@ -25,7 +24,7 @@ fn test_func_def() {
     let mut parser = Parser::new();
     let test_case = "
     fun main() {
-        fun foo() -> float {}
+        fun foo(x: int, y: float) -> float {}
 
         fun foo2() {}
     }
@@ -38,7 +37,20 @@ fn test_func_def() {
             body: vec![
                 Node::FunctionDef(FunctionDef {
                     name: "foo".to_owned(),
-                    args: vec![],
+                    args: vec![
+                        Node::Arg(Arg {
+                            name: "x".to_owned(),
+                            annotation: Box::from(Node::Name(Name {
+                                id: "int".to_owned(),
+                            })),
+                        }),
+                        Node::Arg(Arg {
+                            name: "y".to_owned(),
+                            annotation: Box::from(Node::Name(Name {
+                                id: "float".to_owned(),
+                            })),
+                        }),
+                    ],
                     body: vec![],
                     returns: Box::from(Node::Name(Name {
                         id: "float".to_owned(),

@@ -1,6 +1,6 @@
+use super::ast::{Arg, FunctionDef, Module, Name, Node};
+use crate::grammar::*;
 use crate::tokenizer::token::{Token, Type};
-
-use super::ast::{FunctionDef, Module, Name, Node};
 
 pub struct Parser {
     index: usize,
@@ -17,7 +17,7 @@ impl Parser {
         }
     }
 
-    pub fn build_proc(&mut self) -> FunctionDef {
+    pub fn build_fun(&mut self) -> FunctionDef {
         self.index += 1;
         let name = match self.getttok(0) {
             Some(name) => {
@@ -37,19 +37,43 @@ impl Parser {
             body: vec![],
             returns: Box::from(Node::None),
         };
-
         self.index += 1;
 
         // skip (
         self.index += 1;
-        // TODO: args parsing
+        // TODO: code cleanup
         let mut current = match self.getttok(0) {
             Some(tok) => tok,
             None => todo!(),
         };
         while current.t_type != Type::Rparen {
+            if current.t_type != Type::Word {
+                todo!()
+            }
+            let name = current.value;
             self.index += 1;
             current = self.getttok(0).unwrap();
+            if current.t_type != Type::DoubleDot {
+                todo!()
+            }
+            self.index += 1;
+            current = self.getttok(0).unwrap();
+            let annotation = self.parse_node(&current).unwrap();
+
+            let arg = Arg {
+                name,
+                annotation: Box::from(annotation),
+            };
+
+            definition.args.push(Node::Arg(arg));
+
+            self.index += 1;
+            current = self.getttok(0).unwrap();
+
+            if current.t_type == Type::Comma {
+                self.index += 1;
+                current = self.getttok(0).unwrap();
+            }
         }
         // skip )
         self.index += 1;
@@ -97,12 +121,10 @@ impl Parser {
     pub fn parse_node(&mut self, tok: &Token) -> Option<Node> {
         match tok.t_type {
             Type::Keyword => match tok.value.as_str() {
-                "fun" => Some(Node::FunctionDef(self.build_proc())),
-                "int" => Some(Node::Name(Name {
-                    id: "int".to_owned(),
-                })),
-                "float" => Some(Node::Name(Name {
-                    id: "float".to_owned(),
+                FUN => Some(Node::FunctionDef(self.build_fun())),
+                INT => Some(Node::Name(Name { id: INT.to_owned() })),
+                FLOAT => Some(Node::Name(Name {
+                    id: FLOAT.to_owned(),
                 })),
                 _ => {
                     println!("{:?}", tok);

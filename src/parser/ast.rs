@@ -19,9 +19,10 @@ pub struct FunctionDef {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Arg {
-    name: String,
-    annotation: Box<Node>,
+    pub name: String,
+    pub annotation: Box<Node>,
 }
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Assign {
     pub target: Box<Node>,
