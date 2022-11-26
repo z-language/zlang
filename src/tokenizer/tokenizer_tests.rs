@@ -5,7 +5,7 @@ fn test_strings_normal() {
     let mut tokenizer = Tokenizer::new();
 
     // Its important to note that here I'm escaping the rust's quotes, and not sending the escapes to the parser.
-    let test_case = String::from("\"test\"");
+    let test_case = "\"test\"";
     let expected = Token {
         line: 1,
         pos: 0,
@@ -23,7 +23,7 @@ fn test_strings_normal() {
 fn test_string_escapes() {
     let mut tokenizer = Tokenizer::new();
 
-    let test_case = String::from("\"\\\"\\\"test\\\"\\\"\\\\\"");
+    let test_case = "\"\\\"\\\"test\\\"\\\"\\\\\"";
     let expected = Token {
         line: 1,
         pos: 0,
@@ -41,7 +41,7 @@ fn test_string_escapes() {
 fn test_keywords() {
     let mut tokenizer = Tokenizer::new();
 
-    let test_case = String::from("int float var mut fun");
+    let test_case = "int float var mut fun";
     let expected = vec![
         Token {
             line: 1,
@@ -84,12 +84,10 @@ fn test_keywords() {
 fn test_variables() {
     let mut tokenizer = Tokenizer::new();
 
-    let test_case = String::from(
-        "var ime = \"luka\"
+    let test_case = "var ime = \"luka\"
 var mut starost = 13
 var mut assignLater
-assignLater = 14",
-    );
+assignLater = 14";
 
     let got = tokenizer.tokenize(test_case);
     let expected = get_tokenizer_variable_case();
@@ -99,7 +97,7 @@ assignLater = 14",
 #[test]
 fn test_math_expr_1() {
     let mut tokenizer = Tokenizer::new();
-    let test_case = String::from("2.5 * 3.75");
+    let test_case = "2.5 * 3.75";
     let expected = vec![
         Token {
             line: 1,
@@ -129,7 +127,7 @@ fn test_math_expr_1() {
 #[test]
 fn test_math_expr_2() {
     let mut tokenizer = Tokenizer::new();
-    let test_case = String::from("(3 - 45) -");
+    let test_case = "(3 - 45) -";
 
     let tokens = tokenizer.tokenize(test_case);
     let expected = vec![
@@ -178,7 +176,7 @@ fn test_math_expr_2() {
 #[should_panic]
 fn test_decimal_error() {
     let mut tokenizer = Tokenizer::new();
-    let test_case = String::from("5.34.7");
+    let test_case = "5.34.7";
 
     tokenizer.tokenize(test_case);
 }
@@ -186,7 +184,7 @@ fn test_decimal_error() {
 #[test]
 fn test_symbols() {
     let mut tokenizer = Tokenizer::new();
-    let test_case = String::from("-> -> :");
+    let test_case = "-> -> :";
 
     let expected = vec![
         Token {
@@ -218,7 +216,7 @@ fn test_symbols() {
 #[should_panic]
 fn test_error() {
     let mut tokenizer = Tokenizer::new();
-    let test_case = String::from("\"unclosed string");
+    let test_case = "\"unclosed string";
 
     let tokens = tokenizer.tokenize(test_case);
     println!("{:?}", tokens);

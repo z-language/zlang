@@ -1,4 +1,4 @@
-use crate::tokenizer::{Token, Type};
+use crate::tokenizer::token::{Token, Type};
 
 use super::ast::{FunctionDef, Module, Name, Node};
 

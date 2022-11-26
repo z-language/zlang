@@ -27,7 +27,7 @@ fn main() {
         }
     };
 
-    let tokens = tokenizer.tokenize(source);
+    let tokens = tokenizer.tokenize(&source);
 
     let module = parser.parse(tokens);
     println!("{:#?}", module);

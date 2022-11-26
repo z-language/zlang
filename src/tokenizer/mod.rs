@@ -1,46 +1,21 @@
+use self::token::{Token, Type};
+
+pub mod token;
+#[cfg(test)]
 mod tokenizer_tests;
 
-pub struct Tokenizer {
-    source: String,
+pub struct Tokenizer<'a> {
+    source: &'a str,
     line: u32,
     pos: u32,
     index: usize,
     len: usize,
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum Type {
-    Keyword,
-    Word,
-
-    Lparen,
-    Rparen,
-
-    Nl,
-
-    Lbrack,
-    Rbrack,
-
-    Op,
-    Arrow,
-    Diacritic,
-
-    String,
-    Number,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Token {
-    pub line: u32,
-    pub pos: u32,
-    pub value: String,
-    pub t_type: Type,
-}
-
-impl Tokenizer {
+impl<'a> Tokenizer<'a> {
     pub fn new() -> Self {
         Tokenizer {
-            source: "".to_string(),
+            source: "",
             line: 1,
             pos: 0,
             index: 0,
@@ -48,7 +23,7 @@ impl Tokenizer {
         }
     }
 
-    pub fn tokenize(&mut self, source: String) -> Vec<Token> {
+    pub fn tokenize(&mut self, source: &'a str) -> Vec<Token> {
         let mut tokens: Vec<Token> = vec![];
 
         self.source = source;
@@ -151,30 +126,10 @@ impl Tokenizer {
                     t_type: Type::Diacritic,
                 }),
 
-                '+' => tokens.push(Token {
+                '+' | '=' | '*' | '/' => tokens.push(Token {
                     line: self.line,
                     pos: self.pos,
-                    value: "+".to_string(),
-                    t_type: Type::Op,
-                }),
-
-                '=' => tokens.push(Token {
-                    line: self.line,
-                    pos: self.pos,
-                    value: "=".to_string(),
-                    t_type: Type::Op,
-                }),
-
-                '*' => tokens.push(Token {
-                    line: self.line,
-                    pos: self.pos,
-                    value: "*".to_string(),
-                    t_type: Type::Op,
-                }),
-                '/' => tokens.push(Token {
-                    line: self.line,
-                    pos: self.pos,
-                    value: "/".to_string(),
+                    value: String::from(ch),
                     t_type: Type::Op,
                 }),
 
@@ -298,11 +253,11 @@ impl Tokenizer {
     }
 }
 
-fn is_keyword(word: &String) -> bool {
+fn is_keyword(word: &str) -> bool {
     if [
         "fun", "var", "mut", "return", "if", "elif", "else", "int", "float",
     ]
-    .contains(&word.as_str())
+    .contains(&word)
     {
         return true;
     }

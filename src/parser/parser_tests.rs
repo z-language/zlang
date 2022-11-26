@@ -1,4 +1,4 @@
-use crate::tokenizer::{Token, Tokenizer};
+use crate::tokenizer::{token::Token, Tokenizer};
 
 use super::{ast::*, core::Parser};
 
@@ -21,5 +21,5 @@ fn test_constant_expr() {
 
 fn get_tokens(test_case: String) -> Vec<Token> {
     let mut tokenizer = Tokenizer::new();
-    tokenizer.tokenize(test_case)
+    tokenizer.tokenize(&test_case)
 }
