@@ -23,6 +23,3 @@ pub const IF: &str = "if";
 pub const ELSE: &str = "else";
 pub const INT: &str = "int";
 pub const FLOAT: &str = "float";
-
-const TRUE: &str = "true";
-const FALSE: &str = "false";

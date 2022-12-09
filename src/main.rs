@@ -1,11 +1,7 @@
-mod grammar;
-mod parser;
-mod tokenizer;
-
-use parser::core::Parser;
 use std::env;
 use std::fs;
-use tokenizer::Tokenizer;
+use zlang::parser::core::Parser;
+use zlang::tokenizer::Tokenizer;
 
 fn main() {
     let mut tokenizer = Tokenizer::new();

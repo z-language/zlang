@@ -1,4 +1,4 @@
-use super::ast::{Arg, Constant, FunctionDef, Module, Name, Node, Primitive};
+use super::ast::{Arg, BinOp, Constant, FunctionDef, Module, Name, Node, Primitive};
 use crate::grammar::*;
 use crate::tokenizer::token::{Token, Type};
 
@@ -143,6 +143,14 @@ impl Parser {
         }
     }
 
+    fn build_binop(&self) -> BinOp {
+        BinOp {
+            left: todo!(),
+            op: todo!(),
+            right: todo!(),
+        }
+    }
+
     fn parse_node(&mut self, tok: &Token) -> Option<Node> {
         match tok.t_type {
             Type::Keyword => match tok.value.as_str() {
@@ -156,7 +164,18 @@ impl Parser {
                     todo!()
                 }
             },
-            Type::Int | Type::String | Type::Float => Some(Node::Constant(self.build_constant())),
+            Type::Int | Type::String | Type::Float
+                if self.getttok(1).is_none()
+                    || self.getttok(1).expect("This shouldn't fail...").t_type != Type::Op =>
+            {
+                Some(Node::Constant(self.build_constant()))
+            }
+            Type::Int | Type::String | Type::Float
+                if self.getttok(1).is_some()
+                    && self.getttok(1).expect("This shouldn't fail...").t_type == Type::Op =>
+            {
+                Some(Node::BinOp(self.build_binop()))
+            }
 
             Type::Nl => None,
             _ => {
@@ -193,9 +212,5 @@ impl Parser {
 
         module.body = self.body.clone();
         module
-    }
-
-    fn throw(&self) {
-        panic!()
     }
 }

@@ -17,6 +17,16 @@ fn test_constant_expr() {
 }
 
 #[test]
+#[ignore = "not impl"]
+fn test_binop() {
+    let mut parser = Parser::new();
+    let test_case = "3 + 5 * (6 -3)";
+
+    let ast = parser.parse(get_tokens(test_case));
+    println!("{:#?}", ast);
+}
+
+#[test]
 fn test_func_def() {
     let mut parser = Parser::new();
     let test_case = "
