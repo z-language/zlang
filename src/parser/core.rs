@@ -1,13 +1,8 @@
 use super::ast::{Arg, BinOp, Constant, FunctionDef, Module, Name, Node, Primitive};
+use super::Parser;
 use crate::error::CompilerError;
 use crate::grammar::*;
 use crate::tokenizer::token::{Token, Type};
-
-pub struct Parser {
-    index: usize,
-    tokens: Vec<Token>,
-    body: Vec<Node>,
-}
 
 impl Parser {
     pub fn new() -> Self {

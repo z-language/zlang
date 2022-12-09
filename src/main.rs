@@ -1,6 +1,6 @@
 use std::env;
 use std::fs;
-use zlang::parser::core::Parser;
+use zlang::parser::Parser;
 use zlang::tokenizer::Tokenizer;
 
 fn main() {

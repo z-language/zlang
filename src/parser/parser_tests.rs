@@ -1,4 +1,4 @@
-use super::{ast::*, core::Parser};
+use super::{ast::*, Parser};
 use crate::tokenizer::{token::Token, Tokenizer};
 
 #[test]

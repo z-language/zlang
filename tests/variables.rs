@@ -1,7 +1,7 @@
 mod common;
 
 use common::read_file;
-use zlang::{parser::core::Parser, tokenizer::Tokenizer};
+use zlang::{parser::Parser, tokenizer::Tokenizer};
 
 #[test]
 #[ignore = "not impl"]
