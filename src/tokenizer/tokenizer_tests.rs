@@ -13,7 +13,7 @@ fn test_strings_normal() {
         t_type: Type::String,
     };
 
-    let got = tokenizer.tokenize(test_case);
+    let got = tokenizer.tokenize(test_case).unwrap();
     let token = got.get(0).unwrap().clone();
     assert_eq!(got.len(), 1); // only one token expected
     assert_eq!(expected, token);
@@ -31,7 +31,7 @@ fn test_string_escapes() {
         t_type: Type::String,
     };
 
-    let got = tokenizer.tokenize(test_case);
+    let got = tokenizer.tokenize(test_case).unwrap();
     let token = got.get(0).unwrap().clone();
     assert_eq!(got.len(), 1); // only one token expected
     assert_eq!(expected, token);
@@ -75,7 +75,7 @@ fn test_keywords() {
         },
     ];
 
-    let got = tokenizer.tokenize(test_case);
+    let got = tokenizer.tokenize(test_case).unwrap();
 
     assert_eq!(expected, got);
 }
@@ -89,7 +89,7 @@ var mut starost = 13
 var mut assignLater
 assignLater = 14";
 
-    let got = tokenizer.tokenize(test_case);
+    let got = tokenizer.tokenize(test_case).unwrap();
     let expected = get_tokenizer_variable_case();
     assert_eq!(expected, got);
 }
@@ -119,7 +119,7 @@ fn test_math_expr_1() {
         },
     ];
 
-    let tokens = tokenizer.tokenize(test_case);
+    let tokens = tokenizer.tokenize(test_case).unwrap();
 
     assert_eq!(expected, tokens);
 }
@@ -129,7 +129,7 @@ fn test_math_expr_2() {
     let mut tokenizer = Tokenizer::new();
     let test_case = "(3 - 45) -";
 
-    let tokens = tokenizer.tokenize(test_case);
+    let tokens = tokenizer.tokenize(test_case).unwrap();
     let expected = vec![
         Token {
             line: 1,
@@ -178,7 +178,7 @@ fn test_decimal_error() {
     let mut tokenizer = Tokenizer::new();
     let test_case = "5.34.7";
 
-    tokenizer.tokenize(test_case);
+    tokenizer.tokenize(test_case).unwrap();
 }
 
 #[test]
@@ -207,7 +207,7 @@ fn test_symbols() {
         },
     ];
 
-    let tokens = tokenizer.tokenize(test_case);
+    let tokens = tokenizer.tokenize(test_case).unwrap();
 
     assert_eq!(expected, tokens);
 }
@@ -217,7 +217,7 @@ fn test_comments() {
     let mut tokenizer = Tokenizer::new();
     let test_case = "// this is a comment";
 
-    let tokens = tokenizer.tokenize(test_case);
+    let tokens = tokenizer.tokenize(test_case).unwrap();
 
     assert!(tokens.is_empty());
 }
@@ -228,7 +228,7 @@ fn test_error() {
     let mut tokenizer = Tokenizer::new();
     let test_case = "\"unclosed string";
 
-    let tokens = tokenizer.tokenize(test_case);
+    let tokens = tokenizer.tokenize(test_case).unwrap();
     println!("{:?}", tokens);
 }
 

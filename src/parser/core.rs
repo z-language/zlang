@@ -1,4 +1,5 @@
 use super::ast::{Arg, BinOp, Constant, FunctionDef, Module, Name, Node, Primitive};
+use crate::error::CompilerError;
 use crate::grammar::*;
 use crate::tokenizer::token::{Token, Type};
 
@@ -202,7 +203,7 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self, tokens: Vec<Token>) -> Module {
+    pub fn parse(&mut self, tokens: Vec<Token>) -> Result<Module, CompilerError> {
         let mut module = Module::new();
 
         self.tokens = tokens;
@@ -211,6 +212,6 @@ impl Parser {
         self.step();
 
         module.body = self.body.clone();
-        module
+        Ok(module)
     }
 }

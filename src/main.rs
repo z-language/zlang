@@ -24,8 +24,14 @@ fn main() {
         }
     };
 
-    let tokens = tokenizer.tokenize(&source);
+    let tokens = match tokenizer.tokenize(&source) {
+        Ok(toks) => toks,
+        Err(err) => return err.display(&source),
+    };
 
-    let module = parser.parse(tokens);
+    let module = match parser.parse(tokens) {
+        Ok(module) => module,
+        Err(err) => return err.display(&source),
+    };
     println!("{:#?}", module);
 }

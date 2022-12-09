@@ -1,5 +1,5 @@
 use self::token::{Token, Type};
-use crate::grammar::*;
+use crate::{error::CompilerError, grammar::*};
 
 pub mod token;
 #[cfg(test)]
@@ -24,7 +24,7 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    pub fn tokenize(&mut self, source: &'a str) -> Vec<Token> {
+    pub fn tokenize(&mut self, source: &'a str) -> Result<Vec<Token>, CompilerError> {
         let mut tokens: Vec<Token> = vec![];
 
         self.source = source;
@@ -111,8 +111,7 @@ impl<'a> Tokenizer<'a> {
                         current = match self.get_current() {
                             Some(chr) => chr,
                             None => {
-                                self.throw("String doesn't have a closing bracket.");
-                                '0' // here just so that the compiler doesn't complain
+                                return Err(self.throw("String doesn't have a closing bracket."))
                             }
                         }
                     }
@@ -171,7 +170,7 @@ impl<'a> Tokenizer<'a> {
                     while ch.is_digit(10) || ch == DOT {
                         if ch == DOT {
                             if had_point {
-                                self.throw("A number can only have one decimal point.");
+                                return Err(self.throw("A number can only have one decimal point."));
                             }
                             had_point = true;
                         }
@@ -225,13 +224,13 @@ impl<'a> Tokenizer<'a> {
                     })
                 }
 
-                _ => self.throw(&*format!("Unexpected char: {}", ch)),
+                _ => return Err(self.throw("Unexpeced char.")),
             }
 
             self.incr();
         }
 
-        tokens
+        Ok(tokens)
     }
 
     fn get_current(&self) -> Option<char> {
@@ -246,11 +245,8 @@ impl<'a> Tokenizer<'a> {
         self.source.chars().nth(n)
     }
 
-    fn throw(&self, message: &str) {
-        eprintln!("Tokenizer error: {}", message);
-        println!();
-
-        panic!()
+    fn throw(&self, message: &'a str) -> CompilerError {
+        CompilerError::new(self.line, self.pos, message)
     }
 
     fn incr(&mut self) {
@@ -265,5 +261,5 @@ impl<'a> Tokenizer<'a> {
 }
 
 fn is_keyword(word: &str) -> bool {
-    [FUN, VAR, MUT, RETURN, IF, ELSE, INT, FLOAT].contains(&word)
+    [FUN, VAR, MUT, RETURN, IF, ELSE, INT, FLOAT, TRUE, FALSE].contains(&word)
 }

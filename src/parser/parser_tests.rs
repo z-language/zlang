@@ -6,7 +6,7 @@ fn test_constant_expr() {
     let mut parser = Parser::new();
     let test_case = "3";
 
-    let ast = parser.parse(get_tokens(test_case));
+    let ast = parser.parse(get_tokens(test_case)).unwrap();
     let expected = Module {
         body: vec![Node::Constant(Constant {
             value: Primitive::Int(3),
@@ -36,7 +36,7 @@ fn test_func_def() {
         fun foo2() {}
     }
     ";
-    let ast = parser.parse(get_tokens(test_case));
+    let ast = parser.parse(get_tokens(test_case)).unwrap();
     let expected = Module {
         body: vec![Node::FunctionDef(FunctionDef {
             name: "main".to_owned(),
@@ -79,5 +79,5 @@ fn test_func_def() {
 
 fn get_tokens(test_case: &str) -> Vec<Token> {
     let mut tokenizer = Tokenizer::new();
-    tokenizer.tokenize(test_case)
+    tokenizer.tokenize(test_case).unwrap()
 }
