@@ -13,12 +13,12 @@ impl Parser {
         }
     }
 
-    fn build_fun(&mut self) -> FunctionDef {
+    fn build_fun(&mut self) -> Result<FunctionDef, CompilerError> {
         self.index += 1;
         let name = match self.getttok(0) {
             Some(name) => {
                 if name.t_type != Type::Word {
-                    panic!()
+                    return Err(CompilerError::new(name.line, name.pos, "jebi se"));
                 }
                 name
             }
@@ -54,11 +54,11 @@ impl Parser {
             }
             self.index += 1;
             current = self.getttok(0).unwrap();
-            let annotation = self.parse_node(&current).unwrap();
+            let annotation = self.parse_node(&current)?;
 
             let arg = Arg {
                 name,
-                annotation: Box::from(annotation),
+                annotation: Box::from(annotation.unwrap()),
             };
 
             definition.args.push(Node::Arg(arg));
@@ -78,8 +78,8 @@ impl Parser {
             if tok.t_type == Type::Arrow {
                 self.index += 1;
                 let tok = self.getttok(0).unwrap();
-                let returns = self.parse_node(&tok).unwrap();
-                definition.returns = Box::from(returns);
+                let returns = self.parse_node(&tok)?;
+                definition.returns = Box::from(returns.unwrap());
                 self.index += 1;
             }
         }
@@ -93,25 +93,20 @@ impl Parser {
         };
 
         while current.t_type != Type::Rbrack {
-            let tok = match self.parse_node(&current) {
-                Some(tok) => tok,
-                None => {
-                    self.index += 1;
-                    current = self.getttok(0).unwrap();
-                    continue;
-                }
-            };
+            let tok = self.parse_node(&current)?;
 
             self.index += 1;
             current = self.getttok(0).unwrap();
 
-            println!("{:?}", tok);
-            definition.body.push(tok);
+            definition.body.push(match tok {
+                Some(tok) => tok,
+                None => continue,
+            });
         }
 
         self.index += 1;
 
-        definition
+        Ok(definition)
     }
 
     fn build_constant(&self) -> Constant {
@@ -147,14 +142,14 @@ impl Parser {
         }
     }
 
-    fn parse_node(&mut self, tok: &Token) -> Option<Node> {
+    fn parse_node(&mut self, tok: &Token) -> Result<Option<Node>, CompilerError> {
         match tok.t_type {
             Type::Keyword => match tok.value.as_str() {
-                FUN => Some(Node::FunctionDef(self.build_fun())),
-                INT => Some(Node::Name(Name { id: INT.to_owned() })),
-                FLOAT => Some(Node::Name(Name {
+                FUN => Ok(Some(Node::FunctionDef(self.build_fun()?))),
+                INT => Ok(Some(Node::Name(Name { id: INT.to_owned() }))),
+                FLOAT => Ok(Some(Node::Name(Name {
                     id: FLOAT.to_owned(),
-                })),
+                }))),
                 _ => {
                     println!("{:?}", tok);
                     todo!()
@@ -164,27 +159,26 @@ impl Parser {
                 if self.getttok(1).is_none()
                     || self.getttok(1).expect("This shouldn't fail...").t_type != Type::Op =>
             {
-                Some(Node::Constant(self.build_constant()))
+                Ok(Some(Node::Constant(self.build_constant())))
             }
             Type::Int | Type::String | Type::Float
                 if self.getttok(1).is_some()
                     && self.getttok(1).expect("This shouldn't fail...").t_type == Type::Op =>
             {
-                Some(Node::BinOp(self.build_binop()))
+                Ok(Some(Node::BinOp(self.build_binop())))
             }
 
-            Type::Nl => None,
-            _ => {
-                println!("Token failure: {:?}", tok);
-                panic!()
-            }
+            Type::Nl => Ok(None),
+            _ => Err(CompilerError::new(tok.line, tok.pos, "Unknown token.")),
         }
     }
 
     fn step(&mut self) {
         if let Some(token) = self.getttok(0) {
-            if let Some(node) = self.parse_node(&token) {
-                self.body.push(node);
+            if let Ok(node) = self.parse_node(&token) {
+                if let Some(node) = node {
+                    self.body.push(node)
+                };
             }
             self.index += 1;
             self.step();

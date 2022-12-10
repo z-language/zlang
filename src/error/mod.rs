@@ -3,21 +3,25 @@ use std::fmt::{self, Display};
 const LINE_PADDING: u32 = 3;
 
 #[derive(Debug, Clone)]
-pub struct CompilerError<'guard> {
+pub struct CompilerError {
     line: u32,
     pos: u32,
-    message: &'guard str,
+    message: String,
 }
 
-impl<'guard> Display for CompilerError<'guard> {
+impl Display for CompilerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.message)
     }
 }
 
-impl<'guard> CompilerError<'guard> {
-    pub fn new(line: u32, pos: u32, message: &'guard str) -> Self {
-        CompilerError { line, pos, message }
+impl CompilerError {
+    pub fn new(line: u32, pos: u32, message: &str) -> Self {
+        CompilerError {
+            line,
+            pos,
+            message: message.to_owned(),
+        }
     }
 
     pub fn display(&self, source: &str) {
