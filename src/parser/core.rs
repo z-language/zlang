@@ -18,7 +18,11 @@ impl Parser {
         let name = match self.getttok(0) {
             Some(name) => {
                 if name.t_type != Type::Word {
-                    return Err(CompilerError::new(name.line, name.pos, "jebi se"));
+                    return Err(CompilerError::new(
+                        name.line,
+                        name.pos,
+                        "Expected a word for function name.",
+                    ));
                 }
                 name
             }
@@ -150,10 +154,7 @@ impl Parser {
                 FLOAT => Ok(Some(Node::Name(Name {
                     id: FLOAT.to_owned(),
                 }))),
-                _ => {
-                    println!("{:?}", tok);
-                    todo!()
-                }
+                _ => Err(CompilerError::new(tok.line, tok.pos, "Not impl.")),
             },
             Type::Int | Type::String | Type::Float
                 if self.getttok(1).is_none()
@@ -169,20 +170,28 @@ impl Parser {
             }
 
             Type::Nl => Ok(None),
-            _ => Err(CompilerError::new(tok.line, tok.pos, "Unknown token.")),
+            _ => Err(CompilerError::new(
+                tok.line,
+                tok.pos,
+                &*format!("Unknown token: {}", tok),
+            )),
         }
     }
 
-    fn step(&mut self) {
+    fn step(&mut self) -> Result<(), CompilerError> {
         if let Some(token) = self.getttok(0) {
-            if let Ok(node) = self.parse_node(&token) {
-                if let Some(node) = node {
-                    self.body.push(node)
-                };
+            match self.parse_node(&token) {
+                Ok(node) => {
+                    if let Some(node) = node {
+                        self.body.push(node)
+                    }
+                }
+                Err(err) => return Err(err),
             }
             self.index += 1;
-            self.step();
-        }
+            return self.step();
+        };
+        Ok(())
     }
 
     fn getttok(&self, offset: isize) -> Option<Token> {
@@ -198,7 +207,7 @@ impl Parser {
         self.tokens = tokens;
         self.index = 0;
 
-        self.step();
+        self.step()?;
 
         module.body = self.body.clone();
         Ok(module)
