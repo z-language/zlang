@@ -27,6 +27,36 @@ fn test_binop() {
 }
 
 #[test]
+fn test_fcall() {
+    let mut parser = Parser::new();
+    let test_case = "foo(1, mark, \"peter\", 6.7)";
+    let expected = Module {
+        body: vec![Node::Call(Call {
+            func: Name {
+                id: "foo".to_owned(),
+            },
+            args: vec![
+                Node::Constant(Constant {
+                    value: Primitive::Int(1),
+                }),
+                Node::Name(Name {
+                    id: "mark".to_owned(),
+                }),
+                Node::Constant(Constant {
+                    value: Primitive::Str("peter".to_owned()),
+                }),
+                Node::Constant(Constant {
+                    value: Primitive::Float(6.7),
+                }),
+            ],
+        })],
+    };
+
+    let ast = parser.parse(get_tokens(test_case)).unwrap();
+    assert_eq!(expected, ast);
+}
+
+#[test]
 fn test_func_def() {
     let mut parser = Parser::new();
     let test_case = "

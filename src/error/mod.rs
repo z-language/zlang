@@ -1,6 +1,6 @@
 use std::fmt::{self, Display};
 
-const LINE_PADDING: u32 = 3;
+const LINE_PADDING: u32 = 10;
 
 #[derive(Debug, Clone)]
 pub struct CompilerError {
@@ -25,10 +25,14 @@ impl CompilerError {
     }
 
     pub fn display(&self, source: &str) {
-        let mut line_num = self.line - LINE_PADDING;
+        let mut line_num = 0;
+        if LINE_PADDING < self.line {
+            line_num = self.line - LINE_PADDING;
+        }
+
         source
             .split('\n')
-            .skip((self.line - LINE_PADDING) as usize)
+            .skip(line_num as usize)
             .take((LINE_PADDING * 2) as usize)
             .for_each(|line| {
                 line_num += 1;

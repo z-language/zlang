@@ -1,4 +1,4 @@
-use super::ast::{Arg, BinOp, Constant, FunctionDef, Module, Name, Node, Primitive};
+use super::ast::{Arg, BinOp, Call, Constant, FunctionDef, Module, Name, Node, Primitive};
 use super::Parser;
 use crate::error::CompilerError;
 use crate::grammar::*;
@@ -44,25 +44,60 @@ impl Parser {
         // TODO: code cleanup
         let mut current = match self.getttok(0) {
             Some(tok) => tok,
-            None => todo!(),
+            None => return Err(CompilerError::new(name.line, name.pos + 1, "Arg error.")),
         };
         while current.t_type != Type::Rparen {
             if current.t_type != Type::Word {
-                todo!()
+                return Err(CompilerError::new(
+                    current.line,
+                    current.pos,
+                    "Arg name should be a word!",
+                ));
             }
             let name = current.value;
             self.index += 1;
-            current = self.getttok(0).unwrap();
+            current = match self.getttok(0) {
+                Some(tok) => tok,
+                None => {
+                    return Err(CompilerError::new(
+                        current.line,
+                        current.pos + 1,
+                        "Missing tokens required for argument construction.",
+                    ))
+                }
+            };
             if current.t_type != Type::DoubleDot {
-                todo!()
+                return Err(CompilerError::new(
+                    current.line,
+                    current.pos - 1,
+                    "Please specify the type of this argument!",
+                ));
             }
             self.index += 1;
-            current = self.getttok(0).unwrap();
-            let annotation = self.parse_node(&current)?;
+            current = match self.getttok(0) {
+                Some(tok) => tok,
+                None => {
+                    return Err(CompilerError::new(
+                        current.line,
+                        current.pos + 1,
+                        "Missing tokens required for argument construction.",
+                    ))
+                }
+            };
+            let annotation = match self.parse_node(&current)? {
+                Some(an) => an,
+                None => {
+                    return Err(CompilerError::new(
+                        current.line,
+                        current.pos,
+                        "Please provide a type.",
+                    ))
+                }
+            };
 
             let arg = Arg {
                 name,
-                annotation: Box::from(annotation.unwrap()),
+                annotation: Box::from(annotation),
             };
 
             definition.args.push(Node::Arg(arg));
@@ -72,7 +107,16 @@ impl Parser {
 
             if current.t_type == Type::Comma {
                 self.index += 1;
-                current = self.getttok(0).unwrap();
+                current = match self.getttok(0) {
+                    Some(tok) => tok,
+                    None => {
+                        return Err(CompilerError::new(
+                            current.line,
+                            current.pos,
+                            "Please seperate arguments with a comma.",
+                        ))
+                    }
+                };
             }
         }
         // skip )
@@ -93,14 +137,29 @@ impl Parser {
 
         let mut current = match self.getttok(0) {
             Some(tok) => tok,
-            None => todo!(),
+            None => {
+                return Err(CompilerError::new(
+                    current.line,
+                    current.pos + 1,
+                    "Expected a function body!",
+                ))
+            }
         };
 
         while current.t_type != Type::Rbrack {
             let tok = self.parse_node(&current)?;
 
             self.index += 1;
-            current = self.getttok(0).unwrap();
+            current = match self.getttok(0) {
+                Some(tok) => tok,
+                None => {
+                    return Err(CompilerError::new(
+                        current.line,
+                        current.pos,
+                        "Expected a closing bracket!",
+                    ))
+                }
+            };
 
             definition.body.push(match tok {
                 Some(tok) => tok,
@@ -113,29 +172,78 @@ impl Parser {
         Ok(definition)
     }
 
-    fn build_constant(&self) -> Constant {
-        let tok = self.getttok(0).unwrap();
+    fn build_fcall(&mut self) -> Result<Call, CompilerError> {
+        let name = self.getttok(0).unwrap();
+        let mut args = vec![];
+
+        self.index += 1;
+
+        // skip the (
+        self.index += 1;
+
+        while let Some(token) = self.getttok(0) {
+            match token.t_type {
+                Type::Comma => {
+                    self.index += 1;
+                    continue;
+                }
+                Type::Rparen => break,
+
+                _ => args.push(match self.parse_node(&token)? {
+                    Some(tok) => tok,
+                    None => continue,
+                }),
+            };
+            self.index += 1;
+        }
+
+        Ok(Call {
+            func: Name { id: name.value },
+            args,
+        })
+    }
+
+    fn build_constant(&self, tok: &Token) -> Result<Constant, CompilerError> {
         match tok.t_type {
-            Type::String => Constant {
-                value: Primitive::Str(tok.value),
-            },
+            Type::String => Ok(Constant {
+                value: Primitive::Str(tok.value.clone()),
+            }),
             Type::Int => {
                 let val = tok.value.parse().expect("This shouldn't fail...");
 
-                Constant {
+                Ok(Constant {
                     value: Primitive::Int(val),
-                }
+                })
             }
             Type::Float => {
                 let val = tok.value.parse().expect("This shouldn't fail...");
 
-                Constant {
+                Ok(Constant {
                     value: Primitive::Float(val),
-                }
+                })
             }
 
-            _ => todo!(),
+            _ => {
+                return Err(CompilerError::new(
+                    tok.line,
+                    tok.pos,
+                    "Not yet implemented!",
+                ))
+            }
         }
+    }
+
+    fn build_name(&self, tok: &Token) -> Result<Name, CompilerError> {
+        if tok.t_type != Type::Word {
+            return Err(CompilerError::new(
+                tok.line,
+                tok.pos,
+                "Name should be a Word type!",
+            ));
+        }
+        Ok(Name {
+            id: tok.value.clone(),
+        })
     }
 
     fn build_binop(&self) -> BinOp {
@@ -160,7 +268,7 @@ impl Parser {
                 if self.getttok(1).is_none()
                     || self.getttok(1).expect("This shouldn't fail...").t_type != Type::Op =>
             {
-                Ok(Some(Node::Constant(self.build_constant())))
+                Ok(Some(Node::Constant(self.build_constant(tok)?)))
             }
             Type::Int | Type::String | Type::Float
                 if self.getttok(1).is_some()
@@ -168,6 +276,15 @@ impl Parser {
             {
                 Ok(Some(Node::BinOp(self.build_binop())))
             }
+
+            Type::Word => match self.getttok(1) {
+                Some(next_token) => match next_token.t_type {
+                    Type::Lparen => return Ok(Some(Node::Call(self.build_fcall()?))),
+                    Type::Nl => return Ok(None),
+                    _ => return Ok(Some(Node::Name(self.build_name(&tok)?))),
+                },
+                None => return Ok(None),
+            },
 
             Type::Nl => Ok(None),
             _ => Err(CompilerError::new(

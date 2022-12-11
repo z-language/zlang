@@ -31,7 +31,8 @@ fn main() {
 
     let module = match parser.parse(tokens) {
         Ok(module) => module,
-        Err(err) => return err.display(&source),
+        Err(err) => return err.display("gay"),
     };
+
     println!("{:#?}", module);
 }
