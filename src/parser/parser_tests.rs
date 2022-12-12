@@ -17,13 +17,35 @@ fn test_constant_expr() {
 }
 
 #[test]
-#[ignore = "not yet impl"]
 fn test_binop() {
     let mut parser = Parser::new();
     let test_case = "3 + 5 * (6 -3)";
+    let expected = Module {
+        body: vec![Node::BinOp(BinOp {
+            left: Box::new(Node::Constant(Constant {
+                value: Primitive::Int(3),
+            })),
+            op: Operator::Add,
+            right: Box::new(Node::BinOp(BinOp {
+                left: Box::new(Node::Constant(Constant {
+                    value: Primitive::Int(5),
+                })),
+                op: Operator::Mult,
+                right: Box::new(Node::BinOp(BinOp {
+                    left: Box::new(Node::Constant(Constant {
+                        value: Primitive::Int(6),
+                    })),
+                    op: Operator::Sub,
+                    right: Box::new(Node::Constant(Constant {
+                        value: Primitive::Int(3),
+                    })),
+                })),
+            })),
+        })],
+    };
 
-    let ast = parser.parse(get_tokens(test_case));
-    println!("{:#?}", ast);
+    let ast = parser.parse(get_tokens(test_case)).unwrap();
+    assert_eq!(expected, ast);
 }
 
 #[test]
