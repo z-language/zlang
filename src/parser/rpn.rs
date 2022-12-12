@@ -8,11 +8,11 @@ pub fn shutting_yard(toks: Vec<ExprPart>) -> Result<Vec<ExprPart>, CompilerError
     for token in toks {
         match token {
             ExprPart::Operator(operator) => {
-                while operator_stack.len() > 1 {
+                while operator_stack.len() > 0 {
                     let top = operator_stack.last().unwrap();
                     match top {
                         ExprPart::Operator(o2) => {
-                            if precedence(o2) <= precedence(&operator) {
+                            if precedence(o2) < precedence(&operator) {
                                 break;
                             }
                         }
@@ -23,7 +23,7 @@ pub fn shutting_yard(toks: Vec<ExprPart>) -> Result<Vec<ExprPart>, CompilerError
 
                     output.push(operator_stack.pop().unwrap());
                 }
-                operator_stack.push(ExprPart::Operator(operator))
+                operator_stack.push(ExprPart::Operator(operator));
             }
             ExprPart::Operand(operand) => output.push(ExprPart::Operand(operand)),
             ExprPart::Lpar => operator_stack.push(ExprPart::Lpar),
