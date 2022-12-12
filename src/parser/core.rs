@@ -1,8 +1,19 @@
-use super::ast::{Arg, BinOp, Call, Constant, FunctionDef, Module, Name, Node, Primitive};
+use super::ast::{
+    Arg, BinOp, Call, Constant, FunctionDef, Module, Name, Node, Operator, Primitive,
+};
 use super::Parser;
 use crate::error::CompilerError;
 use crate::grammar::*;
+use crate::parser::rpn::shutting_yard;
 use crate::tokenizer::token::{Token, Type};
+
+#[derive(Debug, PartialEq)]
+pub enum ExprPart {
+    Operator(Operator),
+    Operand(Node),
+    Lpar,
+    Rpar,
+}
 
 impl Parser {
     pub fn new() -> Self {
@@ -10,6 +21,8 @@ impl Parser {
             index: 0,
             tokens: vec![],
             body: vec![],
+            building_binop: vec![false],
+            scope: 0,
         }
     }
 
@@ -176,6 +189,9 @@ impl Parser {
         let name = self.getttok(0).unwrap();
         let mut args = vec![];
 
+        self.building_binop.push(false);
+        self.scope += 1;
+
         self.index += 1;
 
         // skip the (
@@ -196,6 +212,9 @@ impl Parser {
             };
             self.index += 1;
         }
+
+        self.building_binop.pop().expect("This shouldn't fail.");
+        self.scope -= 1;
 
         Ok(Call {
             func: Name { id: name.value },
@@ -246,12 +265,82 @@ impl Parser {
         })
     }
 
-    fn build_binop(&self) -> BinOp {
-        BinOp {
-            left: todo!(),
-            op: todo!(),
-            right: todo!(),
+    fn build_binop(&mut self) -> Result<BinOp, CompilerError> {
+        let mut expr_unordered: Vec<ExprPart> = vec![];
+        self.building_binop[self.scope] = true;
+
+        while let Some(token) = self.getttok(0) {
+            match token.t_type {
+                Type::Op => {
+                    expr_unordered.push(ExprPart::Operator(match token.value.as_str() {
+                        "+" => Operator::Add,
+                        "-" => Operator::Sub,
+                        "*" => Operator::Mult,
+                        "/" => Operator::Div,
+                        _ => {
+                            return Err(CompilerError::new(token.line, token.pos, "Unknown token."))
+                        }
+                    }));
+                    self.index += 1;
+                    continue;
+                }
+                Type::Int | Type::String | Type::Float | Type::Word => (),
+                Type::Lparen => {
+                    expr_unordered.push(ExprPart::Lpar);
+                    self.index += 1;
+                    continue;
+                }
+                Type::Rparen => {
+                    if self.scope != 0 {
+                        break;
+                    }
+                    expr_unordered.push(ExprPart::Rpar);
+                    self.index += 1;
+                    continue;
+                }
+
+                _ => break,
+            };
+            let tok = self.parse_node(&token)?.expect("This shouldn't fail.");
+
+            self.index += 1;
+            expr_unordered.push(ExprPart::Operand(tok));
         }
+
+        // 1 2 fcall() - * 4 /
+        // (1 * (2 - fcall())) - 4
+
+        // R = 2 - fcall()
+        // R2 = 1 * R
+        // R3 = R2 - 4
+
+        let mut expr_ordered = shutting_yard(expr_unordered)?;
+        expr_ordered.reverse();
+
+        let mut stack: Vec<Node> = vec![];
+        while let Some(part) = expr_ordered.pop() {
+            match part {
+                ExprPart::Operator(op) => {
+                    let right = stack.pop().unwrap();
+                    let left = stack.pop().unwrap();
+                    stack.push(Node::BinOp(BinOp {
+                        left: Box::new(left),
+                        op,
+                        right: Box::new(right),
+                    }))
+                }
+                ExprPart::Operand(operand) => stack.push(operand),
+
+                _ => panic!(),
+            }
+        }
+
+        self.index -= 1;
+        self.building_binop[self.scope] = false;
+        Ok(match stack.pop().unwrap() {
+            Node::BinOp(binop) => binop,
+            _ => panic!(),
+        })
     }
 
     fn parse_node(&mut self, tok: &Token) -> Result<Option<Node>, CompilerError> {
@@ -266,15 +355,17 @@ impl Parser {
             },
             Type::Int | Type::String | Type::Float
                 if self.getttok(1).is_none()
+                    || self.building_binop[self.scope]
                     || self.getttok(1).expect("This shouldn't fail...").t_type != Type::Op =>
             {
                 Ok(Some(Node::Constant(self.build_constant(tok)?)))
             }
             Type::Int | Type::String | Type::Float
                 if self.getttok(1).is_some()
+                    && !self.building_binop[self.scope]
                     && self.getttok(1).expect("This shouldn't fail...").t_type == Type::Op =>
             {
-                Ok(Some(Node::BinOp(self.build_binop())))
+                Ok(Some(Node::BinOp(self.build_binop()?)))
             }
 
             Type::Word => match self.getttok(1) {
