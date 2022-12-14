@@ -217,6 +217,15 @@ impl Parser {
                     value: Primitive::Float(val),
                 })
             }
+            Type::Keyword => match tok.value.as_str() {
+                "true" => Ok(Constant {
+                    value: Primitive::Bool(true),
+                }),
+                "false" => Ok(Constant {
+                    value: Primitive::Bool(false),
+                }),
+                _ => panic!(),
+            },
 
             _ => return Err(tok.into_err("Not yet implemented!")),
         }
@@ -420,6 +429,8 @@ impl Parser {
         Ok(scope)
     }
 
+    // fn build_if(&mut self) -> Result<If, CompilerError> {}
+
     fn parse_node(&mut self, tok: &Token) -> Result<Option<Node>, CompilerError> {
         match tok.t_type {
             Type::Keyword => match tok.value.as_str() {
@@ -428,6 +439,7 @@ impl Parser {
                 FLOAT => Ok(Some(Node::Name(Name {
                     id: FLOAT.to_owned(),
                 }))),
+                TRUE | FALSE => Ok(Some(Node::Constant(self.build_constant(tok)?))),
                 VAR => Ok(Some(Node::VariableDef(self.build_var()?))),
                 _ => Err(tok.into_err("Not impl.")),
             },
