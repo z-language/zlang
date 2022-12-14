@@ -251,7 +251,7 @@ pub fn get_tokenizer_variable_case() -> Vec<Token> {
             line: 1,
             pos: 8,
             value: "=".to_owned(),
-            t_type: Op,
+            t_type: Equals,
         },
         Token {
             line: 1,
@@ -287,7 +287,7 @@ pub fn get_tokenizer_variable_case() -> Vec<Token> {
             line: 2,
             pos: 16,
             value: "=".to_owned(),
-            t_type: Op,
+            t_type: Equals,
         },
         Token {
             line: 2,
@@ -335,7 +335,7 @@ pub fn get_tokenizer_variable_case() -> Vec<Token> {
             line: 4,
             pos: 12,
             value: "=".to_owned(),
-            t_type: Op,
+            t_type: Equals,
         },
         Token {
             line: 4,

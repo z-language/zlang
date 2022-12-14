@@ -1,5 +1,6 @@
 use super::ast::{
-    Arg, BinOp, Call, Constant, FunctionDef, Module, Name, Node, Operator, Primitive,
+    Arg, Assign, BinOp, Call, Constant, FunctionDef, Module, Name, Node, Operator, Primitive,
+    VariableDef,
 };
 use super::Parser;
 use crate::error::CompilerError;
@@ -28,7 +29,7 @@ impl Parser {
 
     fn build_fun(&mut self) -> Result<FunctionDef, CompilerError> {
         self.index += 1;
-        let name = match self.getttok(0) {
+        let name = match self.gettok(0) {
             Some(name) => {
                 if name.t_type != Type::Word {
                     return Err(CompilerError::new(
@@ -55,7 +56,7 @@ impl Parser {
         // skip (
         self.index += 1;
         // TODO: code cleanup
-        let mut current = match self.getttok(0) {
+        let mut current = match self.gettok(0) {
             Some(tok) => tok,
             None => return Err(CompilerError::new(name.line, name.pos + 1, "Arg error.")),
         };
@@ -69,7 +70,7 @@ impl Parser {
             }
             let name = current.value;
             self.index += 1;
-            current = match self.getttok(0) {
+            current = match self.gettok(0) {
                 Some(tok) => tok,
                 None => {
                     return Err(CompilerError::new(
@@ -87,7 +88,7 @@ impl Parser {
                 ));
             }
             self.index += 1;
-            current = match self.getttok(0) {
+            current = match self.gettok(0) {
                 Some(tok) => tok,
                 None => {
                     return Err(CompilerError::new(
@@ -116,11 +117,11 @@ impl Parser {
             definition.args.push(Node::Arg(arg));
 
             self.index += 1;
-            current = self.getttok(0).unwrap();
+            current = self.gettok(0).unwrap();
 
             if current.t_type == Type::Comma {
                 self.index += 1;
-                current = match self.getttok(0) {
+                current = match self.gettok(0) {
                     Some(tok) => tok,
                     None => {
                         return Err(CompilerError::new(
@@ -135,10 +136,10 @@ impl Parser {
         // skip )
         self.index += 1;
 
-        if let Some(tok) = self.getttok(0) {
+        if let Some(tok) = self.gettok(0) {
             if tok.t_type == Type::Arrow {
                 self.index += 1;
-                let tok = self.getttok(0).unwrap();
+                let tok = self.gettok(0).unwrap();
                 let returns = self.parse_node(&tok)?;
                 definition.returns = Box::from(returns.unwrap());
                 self.index += 1;
@@ -148,7 +149,7 @@ impl Parser {
         // skip the { token
         self.index += 1;
 
-        let mut current = match self.getttok(0) {
+        let mut current = match self.gettok(0) {
             Some(tok) => tok,
             None => {
                 return Err(CompilerError::new(
@@ -163,7 +164,7 @@ impl Parser {
             let tok = self.parse_node(&current)?;
 
             self.index += 1;
-            current = match self.getttok(0) {
+            current = match self.gettok(0) {
                 Some(tok) => tok,
                 None => {
                     return Err(CompilerError::new(
@@ -186,7 +187,7 @@ impl Parser {
     }
 
     fn build_fcall(&mut self) -> Result<Call, CompilerError> {
-        let name = self.getttok(0).unwrap();
+        let name = self.gettok(0).unwrap();
         let mut args = vec![];
 
         self.building_binop.push(false);
@@ -197,7 +198,7 @@ impl Parser {
         // skip the (
         self.index += 1;
 
-        while let Some(token) = self.getttok(0) {
+        while let Some(token) = self.gettok(0) {
             match token.t_type {
                 Type::Comma => {
                     self.index += 1;
@@ -252,6 +253,109 @@ impl Parser {
         }
     }
 
+    fn build_var(&mut self) -> Result<VariableDef, CompilerError> {
+        self.index += 1;
+
+        let mut mutable = false;
+        if let Some(tok) = self.gettok(0) {
+            if tok.t_type == Type::Keyword && tok.value == "mut" {
+                mutable = true;
+                self.index += 1;
+            }
+        }
+
+        let name = match self.gettok(0) {
+            Some(name) => {
+                if name.t_type != Type::Word {
+                    return Err(CompilerError::new(
+                        name.line,
+                        name.pos,
+                        "Variable name should be a word!",
+                    ));
+                }
+                name
+            }
+            None => {
+                let tok = self.gettok(-1).expect("This shouldn't fail");
+                return Err(CompilerError::new(
+                    tok.line,
+                    tok.pos + 1,
+                    "Expected a variable decleration.",
+                ));
+            }
+        };
+
+        // skip the name token
+        self.index += 1;
+
+        let mut assigning = false;
+        if let Some(token) = self.gettok(0) {
+            if token.t_type == Type::Equals {
+                self.index += 1;
+                assigning = true;
+            } else {
+                if !mutable {
+                    return Err(CompilerError::new(
+                        name.line,
+                        name.pos,
+                        "Immutable values have to be assigned at declaration.",
+                    ));
+                }
+            }
+        } else {
+            if !mutable {
+                return Err(CompilerError::new(
+                    name.line,
+                    name.pos,
+                    "Immutable values have to be assigned at declaration.",
+                ));
+            }
+        }
+
+        let value = match self.gettok(0) {
+            Some(val) => match self.parse_node(&val)? {
+                Some(val) => val,
+                None => {
+                    if mutable && !assigning {
+                        Node::None
+                    } else {
+                        return Err(CompilerError::new(
+                            val.line,
+                            val.pos,
+                            "Expected a value in variable assignment.",
+                        ));
+                    }
+                }
+            },
+            None => return Err(CompilerError::new(name.line, name.pos, "Expected a value!")),
+        };
+
+        Ok(VariableDef {
+            name: name.value,
+            mutable,
+            value: Box::new(value),
+        })
+    }
+
+    fn build_assign(&mut self, tok: &Token) -> Result<Assign, CompilerError> {
+        // skip the word and the = tokens
+        self.index += 2;
+
+        let value = match self.gettok(0) {
+            Some(tok) => tok,
+            None => return Err(CompilerError::new(tok.line, tok.pos, "Expected a value.")),
+        };
+        self.index += 1;
+
+        Ok(Assign {
+            target: tok.value.clone(),
+            value: Box::new(match self.parse_node(&value)? {
+                Some(tok) => tok,
+                None => return Err(CompilerError::new(tok.line, tok.pos, "Expected a value.")),
+            }),
+        })
+    }
+
     fn build_name(&self, tok: &Token) -> Result<Name, CompilerError> {
         if tok.t_type != Type::Word {
             return Err(CompilerError::new(
@@ -269,7 +373,7 @@ impl Parser {
         let mut expr_unordered: Vec<ExprPart> = vec![];
         self.building_binop[self.scope] = true;
 
-        while let Some(token) = self.getttok(0) {
+        while let Some(token) = self.gettok(0) {
             match token.t_type {
                 Type::Op => {
                     expr_unordered.push(ExprPart::Operator(match token.value.as_str() {
@@ -351,26 +455,28 @@ impl Parser {
                 FLOAT => Ok(Some(Node::Name(Name {
                     id: FLOAT.to_owned(),
                 }))),
+                VAR => Ok(Some(Node::VariableDef(self.build_var()?))),
                 _ => Err(CompilerError::new(tok.line, tok.pos, "Not impl.")),
             },
             Type::Int | Type::String | Type::Float
-                if self.getttok(1).is_none()
+                if self.gettok(1).is_none()
                     || self.building_binop[self.scope]
-                    || self.getttok(1).expect("This shouldn't fail...").t_type != Type::Op =>
+                    || self.gettok(1).expect("This shouldn't fail...").t_type != Type::Op =>
             {
                 Ok(Some(Node::Constant(self.build_constant(tok)?)))
             }
             Type::Int | Type::String | Type::Float
-                if self.getttok(1).is_some()
+                if self.gettok(1).is_some()
                     && !self.building_binop[self.scope]
-                    && self.getttok(1).expect("This shouldn't fail...").t_type == Type::Op =>
+                    && self.gettok(1).expect("This shouldn't fail...").t_type == Type::Op =>
             {
                 Ok(Some(Node::BinOp(self.build_binop()?)))
             }
 
-            Type::Word => match self.getttok(1) {
+            Type::Word => match self.gettok(1) {
                 Some(next_token) => match next_token.t_type {
                     Type::Lparen => return Ok(Some(Node::Call(self.build_fcall()?))),
+                    Type::Equals => return Ok(Some(Node::Assign(self.build_assign(tok)?))),
                     Type::Nl => return Ok(None),
                     _ => return Ok(Some(Node::Name(self.build_name(&tok)?))),
                 },
@@ -387,7 +493,7 @@ impl Parser {
     }
 
     fn step(&mut self) -> Result<(), CompilerError> {
-        if let Some(token) = self.getttok(0) {
+        if let Some(token) = self.gettok(0) {
             match self.parse_node(&token) {
                 Ok(node) => {
                     if let Some(node) = node {
@@ -402,7 +508,7 @@ impl Parser {
         Ok(())
     }
 
-    fn getttok(&self, offset: isize) -> Option<Token> {
+    fn gettok(&self, offset: isize) -> Option<Token> {
         match self.tokens.get(((self.index as isize) + offset) as usize) {
             Some(tok) => Some(tok.clone()),
             None => None,

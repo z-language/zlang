@@ -4,10 +4,10 @@ use common::read_file;
 use zlang::{parser::Parser, tokenizer::Tokenizer};
 
 #[test]
-fn variables_run() {
+fn binop_run() {
     let mut tokenizer = Tokenizer::new();
     let mut parser = Parser::new();
-    let source = read_file("examples/variables.ž");
+    let source = read_file("examples/binop.ž");
 
     let tokens = tokenizer.tokenize(&source).unwrap();
     let _ast = parser.parse(tokens).unwrap();

@@ -1,5 +1,7 @@
 fun main() {
-    var greeting = "hello world"
+    var greeting = 3
+    var mut mutableVar = 4
+
     var mut laterAssign
     laterAssign = "hello to \"mark\" C:\\Drive\\neki"
 }

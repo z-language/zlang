@@ -156,7 +156,14 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
 
-                PLUS | EQUALS | STAR | FORWARD_SLASH | MINUS => tokens.push(Token {
+                EQUALS => tokens.push(Token {
+                    line: self.line,
+                    pos: self.pos,
+                    value: String::from(ch),
+                    t_type: Type::Equals,
+                }),
+
+                PLUS | STAR | FORWARD_SLASH | MINUS => tokens.push(Token {
                     line: self.line,
                     pos: self.pos,
                     value: String::from(ch),

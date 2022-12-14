@@ -20,7 +20,7 @@
                 }
             },
             "args": [
-                "debug/variables.ž"
+                "examples/variables.ž"
             ],
             "cwd": "${workspaceFolder}"
         },

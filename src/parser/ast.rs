@@ -25,7 +25,13 @@ pub struct Arg {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Assign {
-    pub target: Box<Node>,
+    pub target: String,
+    pub value: Box<Node>,
+}
+#[derive(Debug, PartialEq, Clone)]
+pub struct VariableDef {
+    pub name: String,
+    pub mutable: bool,
     pub value: Box<Node>,
 }
 #[derive(Debug, PartialEq, Clone)]
@@ -51,8 +57,9 @@ pub struct Call {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Node {
     FunctionDef(FunctionDef),
-    Arg(Arg),
+    VariableDef(VariableDef),
     Assign(Assign),
+    Arg(Arg),
     Constant(Constant),
     BinOp(BinOp),
     Name(Name),
