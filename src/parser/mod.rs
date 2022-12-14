@@ -1,7 +1,6 @@
 use self::ast::Node;
 use crate::tokenizer::token::Token;
 
-#[allow(dead_code)] // for now
 pub mod ast;
 mod core;
 #[cfg(test)]
