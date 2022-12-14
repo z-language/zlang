@@ -1,11 +1,12 @@
 use std::fmt::{self, Display};
 
-const LINE_PADDING: u32 = 10;
+const LINE_PADDING: usize = 10;
 
 #[derive(Debug, Clone)]
 pub struct CompilerError {
-    line: u32,
-    pos: u32,
+    line: usize,
+    pos: usize,
+    arrows: usize,
     message: String,
 }
 
@@ -16,10 +17,13 @@ impl Display for CompilerError {
 }
 
 impl CompilerError {
-    pub fn new(line: u32, pos: u32, message: &str) -> Self {
+    pub fn new(line: usize, pos: usize, len: usize, message: &str) -> Self {
+        let arrows = if len == 0 { 1 } else { len };
+
         CompilerError {
             line,
             pos,
+            arrows,
             message: message.to_owned(),
         }
     }
@@ -32,13 +36,13 @@ impl CompilerError {
 
         source
             .split('\n')
-            .skip(line_num as usize)
-            .take((LINE_PADDING * 2) as usize)
+            .skip(line_num)
+            .take(LINE_PADDING * 2)
             .for_each(|line| {
                 line_num += 1;
                 if line_num == self.line + 1 {
-                    let spaces = " ".repeat(self.pos as usize + 5);
-                    let arrows = "^";
+                    let spaces = " ".repeat(self.pos + 5);
+                    let arrows = "^".repeat(self.arrows);
                     eprintln!("{}{} {}", spaces, arrows, self.message);
                 }
                 println!("{}| {}", padding(line_num), line)
@@ -48,8 +52,13 @@ impl CompilerError {
     }
 }
 
-fn padding(num: u32) -> String {
+fn padding(num: usize) -> String {
     format!("{:<3}", num)
+}
+
+pub trait MakeErr {
+    fn into_err(&self, message: &str) -> CompilerError;
+    fn into_err_offset(&self, offset: i32, message: &str) -> CompilerError;
 }
 
 #[cfg(test)]

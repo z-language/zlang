@@ -32,7 +32,7 @@ pub fn shutting_yard(toks: Vec<ExprPart>) -> Result<Vec<ExprPart>, CompilerError
                     let top = match operator_stack.last() {
                         Some(top) => top,
                         None => {
-                            return Err(CompilerError::new(0, 0, "TODO: Mismatched parentheses"))
+                            return Err(CompilerError::new(0, 0, 1, "TODO: Mismatched parentheses"))
                         }
                     };
                     match top {

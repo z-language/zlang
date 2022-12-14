@@ -253,7 +253,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn throw(&self, message: &'a str) -> CompilerError {
-        CompilerError::new(self.line, self.pos, message)
+        CompilerError::new(self.line as usize, self.pos as usize, 1, message)
     }
 
     fn incr(&mut self) {

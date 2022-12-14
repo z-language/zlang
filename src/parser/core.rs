@@ -3,7 +3,7 @@ use super::ast::{
     VariableDef,
 };
 use super::Parser;
-use crate::error::CompilerError;
+use crate::error::{CompilerError, MakeErr};
 use crate::grammar::*;
 use crate::parser::rpn::shutting_yard;
 use crate::tokenizer::token::{Token, Type};
@@ -32,11 +32,7 @@ impl Parser {
         let name = match self.gettok(0) {
             Some(name) => {
                 if name.t_type != Type::Word {
-                    return Err(CompilerError::new(
-                        name.line,
-                        name.pos,
-                        "Expected a word for function name.",
-                    ));
+                    return Err(name.into_err("Expected a word for function name."));
                 }
                 name
             }
@@ -58,55 +54,43 @@ impl Parser {
         // TODO: code cleanup
         let mut current = match self.gettok(0) {
             Some(tok) => tok,
-            None => return Err(CompilerError::new(name.line, name.pos + 1, "Arg error.")),
+            None => return Err(name.into_err("Arg error.")), // + 1
         };
         while current.t_type != Type::Rparen {
             if current.t_type != Type::Word {
-                return Err(CompilerError::new(
-                    current.line,
-                    current.pos,
-                    "Arg name should be a word!",
-                ));
+                return Err(current.into_err("Arg name should be a word!"));
             }
             let name = current.value;
             self.index += 1;
             current = match self.gettok(0) {
                 Some(tok) => tok,
                 None => {
-                    return Err(CompilerError::new(
-                        current.line,
-                        current.pos + 1,
-                        "Missing tokens required for argument construction.",
-                    ))
+                    return Err(
+                        CompilerError::new(0, 0, 0, "a"), // TODO: current.into_err("Missing tokens required for argument construction.")
+                    );
                 }
             };
             if current.t_type != Type::DoubleDot {
-                return Err(CompilerError::new(
-                    current.line,
-                    current.pos - 1,
-                    "Please specify the type of this argument!",
-                ));
+                return Err(current.into_err("Please specify the type of this argument!"));
             }
             self.index += 1;
             current = match self.gettok(0) {
                 Some(tok) => tok,
                 None => {
-                    return Err(CompilerError::new(
-                        current.line,
-                        current.pos + 1,
-                        "Missing tokens required for argument construction.",
-                    ))
+                    return Err(
+                        current.into_err("Missing tokens required for argument construction.")
+                    )
                 }
             };
+            if current.t_type == Type::Rparen {
+                return Err(current.into_err("Please specify a type!"));
+            }
             let annotation = match self.parse_node(&current)? {
-                Some(an) => an,
-                None => {
-                    return Err(CompilerError::new(
-                        current.line,
-                        current.pos,
-                        "Please provide a type.",
-                    ))
-                }
+                Some(an) => match &an {
+                    Node::Name(_) => an,
+                    _ => return Err(current.into_err("This isn't a valid type!")),
+                },
+                None => return Err(current.into_err("Please provide a type.")),
             };
 
             let arg = Arg {
@@ -123,13 +107,7 @@ impl Parser {
                 self.index += 1;
                 current = match self.gettok(0) {
                     Some(tok) => tok,
-                    None => {
-                        return Err(CompilerError::new(
-                            current.line,
-                            current.pos,
-                            "Please seperate arguments with a comma.",
-                        ))
-                    }
+                    None => return Err(current.into_err("Please seperate arguments with a comma.")),
                 };
             }
         }
@@ -140,8 +118,19 @@ impl Parser {
             if tok.t_type == Type::Arrow {
                 self.index += 1;
                 let tok = self.gettok(0).unwrap();
-                let returns = self.parse_node(&tok)?;
-                definition.returns = Box::from(returns.unwrap());
+                match tok.t_type {
+                    Type::Lbrack => {
+                        return Err(current.into_err_offset(-1, "Expected a return type!"))
+                    }
+                    _ => (),
+                }
+                let returns = self.parse_node(&tok)?.expect("This shouldn't fail...");
+                match returns {
+                    Node::Name(_) => (),
+                    _ => return Err(tok.into_err("This isn't a valid type!")),
+                }
+
+                definition.returns = Box::from(returns);
                 self.index += 1;
             }
         }
@@ -151,13 +140,7 @@ impl Parser {
 
         let mut current = match self.gettok(0) {
             Some(tok) => tok,
-            None => {
-                return Err(CompilerError::new(
-                    current.line,
-                    current.pos + 1,
-                    "Expected a function body!",
-                ))
-            }
+            None => return Err(current.into_err_offset(1, "Expected a function body!")),
         };
 
         while current.t_type != Type::Rbrack {
@@ -166,13 +149,7 @@ impl Parser {
             self.index += 1;
             current = match self.gettok(0) {
                 Some(tok) => tok,
-                None => {
-                    return Err(CompilerError::new(
-                        current.line,
-                        current.pos,
-                        "Expected a closing bracket!",
-                    ))
-                }
+                None => return Err(current.into_err("Expected a closing bracket!")),
             };
 
             definition.body.push(match tok {
@@ -243,13 +220,7 @@ impl Parser {
                 })
             }
 
-            _ => {
-                return Err(CompilerError::new(
-                    tok.line,
-                    tok.pos,
-                    "Not yet implemented!",
-                ))
-            }
+            _ => return Err(tok.into_err("Not yet implemented!")),
         }
     }
 
@@ -267,21 +238,13 @@ impl Parser {
         let name = match self.gettok(0) {
             Some(name) => {
                 if name.t_type != Type::Word {
-                    return Err(CompilerError::new(
-                        name.line,
-                        name.pos,
-                        "Variable name should be a word!",
-                    ));
+                    return Err(name.into_err("Variable name should be a word!"));
                 }
                 name
             }
             None => {
                 let tok = self.gettok(-1).expect("This shouldn't fail");
-                return Err(CompilerError::new(
-                    tok.line,
-                    tok.pos + 1,
-                    "Expected a variable decleration.",
-                ));
+                return Err(tok.into_err_offset(1, "Expected a variable decleration."));
             }
         };
 
@@ -295,20 +258,14 @@ impl Parser {
                 assigning = true;
             } else {
                 if !mutable {
-                    return Err(CompilerError::new(
-                        name.line,
-                        name.pos,
-                        "Immutable values have to be assigned at declaration.",
-                    ));
+                    return Err(
+                        name.into_err("Immutable values have to be assigned at declaration.")
+                    );
                 }
             }
         } else {
             if !mutable {
-                return Err(CompilerError::new(
-                    name.line,
-                    name.pos,
-                    "Immutable values have to be assigned at declaration.",
-                ));
+                return Err(name.into_err("Immutable values have to be assigned at declaration."));
             }
         }
 
@@ -319,15 +276,11 @@ impl Parser {
                     if mutable && !assigning {
                         Node::None
                     } else {
-                        return Err(CompilerError::new(
-                            val.line,
-                            val.pos,
-                            "Expected a value in variable assignment.",
-                        ));
+                        return Err(val.into_err("Expected a value in variable assignment."));
                     }
                 }
             },
-            None => return Err(CompilerError::new(name.line, name.pos, "Expected a value!")),
+            None => return Err(name.into_err("Expected a value!")),
         };
 
         Ok(VariableDef {
@@ -343,7 +296,7 @@ impl Parser {
 
         let value = match self.gettok(0) {
             Some(tok) => tok,
-            None => return Err(CompilerError::new(tok.line, tok.pos, "Expected a value.")),
+            None => return Err(tok.into_err("Expected a value.")),
         };
         self.index += 1;
 
@@ -351,18 +304,14 @@ impl Parser {
             target: tok.value.clone(),
             value: Box::new(match self.parse_node(&value)? {
                 Some(tok) => tok,
-                None => return Err(CompilerError::new(tok.line, tok.pos, "Expected a value.")),
+                None => return Err(tok.into_err("Expected a value.")),
             }),
         })
     }
 
     fn build_name(&self, tok: &Token) -> Result<Name, CompilerError> {
         if tok.t_type != Type::Word {
-            return Err(CompilerError::new(
-                tok.line,
-                tok.pos,
-                "Name should be a Word type!",
-            ));
+            return Err(tok.into_err("Name should be a Word type!"));
         }
         Ok(Name {
             id: tok.value.clone(),
@@ -381,9 +330,7 @@ impl Parser {
                         "-" => Operator::Sub,
                         "*" => Operator::Mult,
                         "/" => Operator::Div,
-                        _ => {
-                            return Err(CompilerError::new(token.line, token.pos, "Unknown token."))
-                        }
+                        _ => return Err(token.into_err("Unknown token.")),
                     }));
                     self.index += 1;
                     continue;
@@ -456,7 +403,7 @@ impl Parser {
                     id: FLOAT.to_owned(),
                 }))),
                 VAR => Ok(Some(Node::VariableDef(self.build_var()?))),
-                _ => Err(CompilerError::new(tok.line, tok.pos, "Not impl.")),
+                _ => Err(tok.into_err("Not impl.")),
             },
             Type::Int | Type::String | Type::Float
                 if self.gettok(1).is_none()
@@ -484,11 +431,7 @@ impl Parser {
             },
 
             Type::Nl => Ok(None),
-            _ => Err(CompilerError::new(
-                tok.line,
-                tok.pos,
-                &*format!("Unknown token: {}", tok),
-            )),
+            _ => Err(tok.into_err(&*format!("Unknown token: {}", tok))),
         }
     }
 
