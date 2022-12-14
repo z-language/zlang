@@ -18,6 +18,18 @@ pub struct FunctionDef {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct If {
+    pub test: Box<Node>,
+    pub run: Box<Node>,
+    pub orelse: Box<Node>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Scope {
+    pub body: Vec<Node>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Arg {
     pub name: String,
     pub annotation: Box<Node>,
@@ -64,6 +76,8 @@ pub enum Node {
     BinOp(BinOp),
     Name(Name),
     Call(Call),
+    If(If),
+    Scope(Scope),
 
     None,
 }

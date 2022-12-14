@@ -79,6 +79,30 @@ fn test_fcall() {
 }
 
 #[test]
+fn test_scope() {
+    let mut parser = Parser::new();
+    let test_case = "{fun foo() {{}}{{}}}";
+    let expected = Module {
+        body: vec![Node::Scope(Scope {
+            body: vec![
+                Node::FunctionDef(FunctionDef {
+                    name: "foo".to_owned(),
+                    args: vec![],
+                    body: vec![Node::Scope(Scope { body: vec![] })],
+                    returns: Box::from(Node::None),
+                }),
+                Node::Scope(Scope {
+                    body: vec![Node::Scope(Scope { body: vec![] })],
+                }),
+            ],
+        })],
+    };
+
+    let ast = parser.parse(get_tokens(test_case)).unwrap();
+    assert_eq!(expected, ast);
+}
+
+#[test]
 fn test_func_def() {
     let mut parser = Parser::new();
     let test_case = "

@@ -1,6 +1,6 @@
 use super::ast::{
     Arg, Assign, BinOp, Call, Constant, FunctionDef, Module, Name, Node, Operator, Primitive,
-    VariableDef,
+    Scope, VariableDef,
 };
 use super::Parser;
 use crate::error::{CompilerError, MakeErr};
@@ -158,8 +158,6 @@ impl Parser {
             });
         }
 
-        self.index += 1;
-
         Ok(definition)
     }
 
@@ -269,18 +267,17 @@ impl Parser {
             }
         }
 
-        let value = match self.gettok(0) {
-            Some(val) => match self.parse_node(&val)? {
-                Some(val) => val,
-                None => {
-                    if mutable && !assigning {
-                        Node::None
-                    } else {
-                        return Err(val.into_err("Expected a value in variable assignment."));
-                    }
-                }
-            },
-            None => return Err(name.into_err("Expected a value!")),
+        let value = if !assigning {
+            self.index -= 1;
+            Node::None
+        } else {
+            match self.gettok(0) {
+                Some(val) => match self.parse_node(&val)? {
+                    Some(val) => val,
+                    None => return Err(val.into_err("Expected a value in variable assignment.")),
+                },
+                None => return Err(name.into_err("Expected a value!")),
+            }
         };
 
         Ok(VariableDef {
@@ -394,6 +391,35 @@ impl Parser {
         })
     }
 
+    fn build_scope(&mut self, tok: &Token) -> Result<Scope, CompilerError> {
+        // skip {
+        self.index += 1;
+
+        let mut scope = Scope { body: vec![] };
+
+        let mut current = match self.gettok(0) {
+            Some(tok) => tok,
+            None => return Err(tok.into_err_offset(1, "Expected a scope body!")),
+        };
+
+        while current.t_type != Type::Rbrack {
+            let tok = self.parse_node(&current)?;
+
+            self.index += 1;
+            current = match self.gettok(0) {
+                Some(tok) => tok,
+                None => return Err(current.into_err("Expected a closing bracket!")),
+            };
+
+            scope.body.push(match tok {
+                Some(tok) => tok,
+                None => continue,
+            });
+        }
+
+        Ok(scope)
+    }
+
     fn parse_node(&mut self, tok: &Token) -> Result<Option<Node>, CompilerError> {
         match tok.t_type {
             Type::Keyword => match tok.value.as_str() {
@@ -419,6 +445,7 @@ impl Parser {
             {
                 Ok(Some(Node::BinOp(self.build_binop()?)))
             }
+            Type::Lbrack => Ok(Some(Node::Scope(self.build_scope(tok)?))),
 
             Type::Word => match self.gettok(1) {
                 Some(next_token) => match next_token.t_type {
