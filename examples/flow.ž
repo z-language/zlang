@@ -9,6 +9,11 @@ fun main() {
     else if cond {}
     else {}
 
-    if cond {}
+    if cond {
+        // ...
+    }
+
+    if cond do()
+    if cond do() else doElse()
 
 }

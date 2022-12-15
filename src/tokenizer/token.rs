@@ -37,7 +37,7 @@ pub struct Token {
 impl MakeErr for Token {
     fn into_err(&self, message: &str) -> CompilerError {
         CompilerError::new(
-            self.line as usize,
+            self.line as usize + 1,
             self.pos as usize,
             self.value.len(),
             message,
@@ -46,7 +46,7 @@ impl MakeErr for Token {
 
     fn into_err_offset(&self, offset: i32, message: &str) -> CompilerError {
         CompilerError::new(
-            self.line as usize,
+            self.line as usize + 1,
             ((self.pos as i32) + offset) as usize,
             self.value.len(),
             message,
