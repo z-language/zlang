@@ -1,0 +1,14 @@
+fun do() {}
+fun doElse() {}
+
+fun main() {
+    if cond {}
+    else {}
+
+    if cond {}
+    else if cond {}
+    else {}
+
+    if cond {}
+
+}

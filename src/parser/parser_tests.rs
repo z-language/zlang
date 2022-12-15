@@ -17,6 +17,34 @@ fn test_constant_expr() {
 }
 
 #[test]
+fn test_if_statements() {
+    let mut parser = Parser::new();
+    let test_case = "if cond {} else if cond2 {} else do()";
+    let expected = Module {
+        body: vec![Node::If(If {
+            test: Box::new(Node::Name(Name {
+                id: "cond".to_owned(),
+            })),
+            run: Box::new(Node::Scope(Scope { body: vec![] })),
+            orelse: Box::new(Node::If(If {
+                test: Box::new(Node::Name(Name {
+                    id: "cond2".to_owned(),
+                })),
+                run: Box::new(Node::Scope(Scope { body: vec![] })),
+                orelse: Box::new(Node::Call(Call {
+                    func: Name {
+                        id: "do".to_owned(),
+                    },
+                    args: vec![],
+                })),
+            })),
+        })],
+    };
+    let ast = parser.parse(get_tokens(test_case)).unwrap();
+    assert_eq!(expected, ast);
+}
+
+#[test]
 fn test_binop() {
     let mut parser = Parser::new();
     let test_case = "3 + 5 * (6 -3)";

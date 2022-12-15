@@ -452,9 +452,10 @@ impl Parser {
             self.index += 1;
             let orelse = self.parse_node(&self.gettok(0).unwrap())?.unwrap();
             if_statement.orelse = Box::new(orelse);
+        } else {
+            self.index -= 1;
         }
 
-        self.index += 1;
         Ok(if_statement)
     }
 
