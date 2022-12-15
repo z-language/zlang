@@ -1,5 +1,5 @@
 use super::ast::{
-    Arg, Assign, BinOp, Call, Constant, FunctionDef, Module, Name, Node, Operator, Primitive,
+    Arg, Assign, BinOp, Call, Constant, FunctionDef, If, Module, Name, Node, Operator, Primitive,
     Scope, VariableDef,
 };
 use super::Parser;
@@ -429,7 +429,34 @@ impl Parser {
         Ok(scope)
     }
 
-    // fn build_if(&mut self) -> Result<If, CompilerError> {}
+    fn build_if(&mut self) -> Result<If, CompilerError> {
+        self.index += 1;
+        let test = self.parse_node(&self.gettok(0).unwrap())?.unwrap();
+
+        self.index += 1;
+        let run = self.parse_node(&self.gettok(0).unwrap())?.unwrap();
+
+        let mut if_statement = If {
+            test: Box::new(test),
+            run: Box::new(run),
+            orelse: Box::new(Node::None),
+        };
+
+        self.index += 1;
+        let mut token = self.gettok(0).unwrap();
+        while token.t_type == Type::Nl {
+            self.index += 1;
+            token = self.gettok(0).unwrap();
+        }
+        if token.value == "else" {
+            self.index += 1;
+            let orelse = self.parse_node(&self.gettok(0).unwrap())?.unwrap();
+            if_statement.orelse = Box::new(orelse);
+        }
+
+        self.index += 1;
+        Ok(if_statement)
+    }
 
     fn parse_node(&mut self, tok: &Token) -> Result<Option<Node>, CompilerError> {
         match tok.t_type {
@@ -441,6 +468,7 @@ impl Parser {
                 }))),
                 TRUE | FALSE => Ok(Some(Node::Constant(self.build_constant(tok)?))),
                 VAR => Ok(Some(Node::VariableDef(self.build_var()?))),
+                IF => Ok(Some(Node::If(self.build_if()?))),
                 _ => Err(tok.into_err("Not impl.")),
             },
             Type::Int | Type::String | Type::Float
