@@ -20,7 +20,7 @@ fun foo2() {}
 // ^ by default functions return "none"
 ```
 ## Defining variables
-You define a function with the "var" keyword. By default, all variables are immutable, to make a var mutable add the "mut" keyword after the var keyword. Immutable variables have to be assigned at declaration, while mutable variables will, by default, be set to "none".
+You define a variable with the "var" keyword. By default, all variables are immutable and to make a variable mutable add the "mut" keyword after the var keyword. Immutable variables have to be assigned at declaration, while mutable variables will, by default, be set to "none".
 ```kotlin
 var i = 0
 var mut i = 3.5
