@@ -1,29 +1,22 @@
-use std::env;
-use std::fs;
-use std::fs::File;
-use std::io::Write;
-use zlang::compiler::Compiler;
-use zlang::parser::Parser;
-use zlang::tokenizer::Tokenizer;
+mod args;
+
+use args::Args;
+use clap::Parser;
+use std::{fs, io::Write};
+use zlang::compiler::Compiler as zCompiler;
+use zlang::parser::Parser as zParser;
+use zlang::tokenizer::Tokenizer as zLexer;
 
 fn main() {
-    let mut tokenizer = Tokenizer::new();
-    let mut parser = Parser::new();
-    let compiler = Compiler::new();
-    let mut args = env::args();
+    let mut tokenizer = zLexer::new();
+    let mut parser = zParser::new();
+    let compiler = zCompiler::new();
+    let args = Args::parse();
 
-    let filename = match args.nth(1) {
-        Some(name) => name,
-        None => {
-            println!("Please specify a file name!");
-            return;
-        }
-    };
-
-    let source = match fs::read_to_string(filename.clone()) {
+    let source = match fs::read_to_string(&args.file) {
         Ok(source) => source,
         Err(_) => {
-            println!("File: {} doesn't exist.", filename);
+            println!("File: {} doesn't exist.", args.file);
             return;
         }
     };
@@ -38,14 +31,19 @@ fn main() {
         Err(err) => return err.display(&source),
     };
 
-    println!("{:#?}", module);
-    return;
+    if args.parse_only {
+        println!("{:#?}", module);
+        return;
+    }
 
     let bytes = match compiler.compile(module) {
         Ok(prog) => prog,
         Err(err) => return println!("{:?}", err),
     };
 
-    let mut out = File::create("debug/main").unwrap();
+    if args.dry_run {
+        return;
+    }
+    let mut out = fs::File::create(args.out).unwrap();
     out.write_all(&bytes).unwrap();
 }
