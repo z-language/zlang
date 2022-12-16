@@ -253,7 +253,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn throw(&self, message: &'a str) -> CompilerError {
-        CompilerError::new(self.line as usize + 1, self.pos as usize, 1, message)
+        CompilerError::new(self.line as usize, self.pos as usize, 1, message)
     }
 
     fn incr(&mut self) {
@@ -268,5 +268,8 @@ impl<'a> Tokenizer<'a> {
 }
 
 fn is_keyword(word: &str) -> bool {
-    [FUN, VAR, MUT, RETURN, IF, ELSE, INT, FLOAT, TRUE, FALSE].contains(&word)
+    [
+        FUN, VAR, MUT, RETURN, IF, ELSE, INT, FLOAT, TRUE, FALSE, LOOP, BREAK,
+    ]
+    .contains(&word)
 }

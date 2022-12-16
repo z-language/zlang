@@ -30,6 +30,11 @@ pub struct Scope {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Loop {
+    pub body: Scope,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct Arg {
     pub name: String,
     pub annotation: Box<Node>,
@@ -78,7 +83,9 @@ pub enum Node {
     Call(Call),
     If(If),
     Scope(Scope),
+    Loop(Loop),
 
+    Break,
     None,
 }
 

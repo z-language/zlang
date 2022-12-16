@@ -1,6 +1,6 @@
 use super::ast::{
-    Arg, Assign, BinOp, Call, Constant, FunctionDef, If, Module, Name, Node, Operator, Primitive,
-    Scope, VariableDef,
+    Arg, Assign, BinOp, Call, Constant, FunctionDef, If, Loop, Module, Name, Node, Operator,
+    Primitive, Scope, VariableDef,
 };
 use super::Parser;
 use crate::error::{CompilerError, MakeErr};
@@ -266,13 +266,15 @@ impl Parser {
             } else {
                 if !mutable {
                     return Err(
-                        name.into_err("Immutable values have to be assigned at declaration.")
+                        name.into_err("Immutable variables have to be assigned at declaration.")
                     );
                 }
             }
         } else {
             if !mutable {
-                return Err(name.into_err("Immutable values have to be assigned at declaration."));
+                return Err(
+                    name.into_err("Immutable variables have to be assigned at declaration.")
+                );
             }
         }
 
@@ -459,6 +461,22 @@ impl Parser {
         Ok(if_statement)
     }
 
+    fn build_loop(&mut self) -> Result<Loop, CompilerError> {
+        self.index += 1;
+        let mut token = self.gettok(0).unwrap();
+        while token.t_type == Type::Nl {
+            self.index += 1;
+            token = self.gettok(0).unwrap();
+        }
+
+        let body = match self.parse_node(&token)? {
+            Some(Node::Scope(scp)) => scp,
+            _ => panic!(),
+        };
+
+        Ok(Loop { body })
+    }
+
     fn parse_node(&mut self, tok: &Token) -> Result<Option<Node>, CompilerError> {
         match tok.t_type {
             Type::Keyword => match tok.value.as_str() {
@@ -470,6 +488,11 @@ impl Parser {
                 TRUE | FALSE => Ok(Some(Node::Constant(self.build_constant(tok)?))),
                 VAR => Ok(Some(Node::VariableDef(self.build_var()?))),
                 IF => Ok(Some(Node::If(self.build_if()?))),
+                LOOP => Ok(Some(Node::Loop(self.build_loop()?))),
+                BREAK => {
+                    self.index += 1;
+                    Ok(Some(Node::Break))
+                }
                 _ => Err(tok.into_err("Not impl.")),
             },
             Type::Int | Type::String | Type::Float

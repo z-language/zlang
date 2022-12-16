@@ -131,6 +131,24 @@ fn test_scope() {
 }
 
 #[test]
+fn test_loop() {
+    let mut parser = Parser::new();
+    let test_case = "loop {loop{}}";
+    let expected = Module {
+        body: vec![Node::Loop(Loop {
+            body: Scope {
+                body: vec![Node::Loop(Loop {
+                    body: Scope { body: vec![] },
+                })],
+            },
+        })],
+    };
+
+    let ast = parser.parse(get_tokens(test_case)).unwrap();
+    assert_eq!(expected, ast);
+}
+
+#[test]
 fn test_func_def() {
     let mut parser = Parser::new();
     let test_case = "

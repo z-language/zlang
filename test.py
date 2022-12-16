@@ -1,1 +1,2 @@
-True
+while True:
+    break
