@@ -28,6 +28,12 @@ impl CompilerError {
         }
     }
 
+    fn print_message(&self) {
+        let spaces = " ".repeat(self.pos + 5);
+        let arrows = "^".repeat(self.arrows);
+        eprintln!("{}{} {}", spaces, arrows, self.message);
+    }
+
     pub fn display(&self, source: &str) {
         let mut line_num = 0;
         if LINE_PADDING < self.line {
@@ -41,12 +47,14 @@ impl CompilerError {
             .for_each(|line| {
                 line_num += 1;
                 if line_num == self.line + 1 {
-                    let spaces = " ".repeat(self.pos + 5);
-                    let arrows = "^".repeat(self.arrows);
-                    eprintln!("{}{} {}", spaces, arrows, self.message);
+                    self.print_message();
                 }
                 println!("{}| {}", padding(line_num), line)
             });
+
+        if line_num == 1 {
+            self.print_message();
+        }
 
         println!();
     }

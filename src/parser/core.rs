@@ -502,7 +502,7 @@ impl Parser {
             {
                 Ok(Some(Node::Constant(self.build_constant(tok)?)))
             }
-            Type::Int | Type::String | Type::Float
+            Type::Int | Type::String | Type::Float | Type::Word
                 if self.gettok(1).is_some()
                     && !self.building_binop[self.scope]
                     && self.gettok(1).expect("This shouldn't fail...").t_type == Type::Op =>
@@ -510,10 +510,25 @@ impl Parser {
                 Ok(Some(Node::BinOp(self.build_binop()?)))
             }
             Type::Lbrack => Ok(Some(Node::Scope(self.build_scope(tok)?))),
+            Type::Lparen if !self.building_binop[self.scope] => {
+                Ok(Some(Node::BinOp(self.build_binop()?)))
+            }
 
             Type::Word => match self.gettok(1) {
                 Some(next_token) => match next_token.t_type {
-                    Type::Lparen => return Ok(Some(Node::Call(self.build_fcall()?))),
+                    Type::Lparen => {
+                        let prev_index = self.index;
+                        let call = self.build_fcall()?;
+                        let next = match self.gettok(1) {
+                            Some(tok) => tok,
+                            None => return Ok(Some(Node::Call(call))),
+                        };
+                        if next.value == "+" && !self.building_binop[self.scope] {
+                            self.index = prev_index;
+                            return Ok(Some(Node::BinOp(self.build_binop()?)));
+                        }
+                        return Ok(Some(Node::Call(call)));
+                    }
                     Type::Equals => return Ok(Some(Node::Assign(self.build_assign(tok)?))),
                     Type::Nl => return Ok(None),
                     _ => return Ok(Some(Node::Name(self.build_name(&tok)?))),

@@ -45,7 +45,7 @@ fn test_if_statements() {
 }
 
 #[test]
-fn test_binop() {
+fn test_binop_1() {
     let mut parser = Parser::new();
     let test_case = "3 + 5 * (6 -3)";
     let expected = Module {
@@ -70,6 +70,55 @@ fn test_binop() {
                 })),
             })),
         })],
+    };
+
+    let ast = parser.parse(get_tokens(test_case)).unwrap();
+    assert_eq!(expected, ast);
+}
+
+#[test]
+fn test_binop_2() {
+    let mut parser = Parser::new();
+    let test_case = "foo() + 1\nage +2\n(3 - 2.5) * 4";
+    let expected = Module {
+        body: vec![
+            Node::BinOp(BinOp {
+                left: Box::new(Node::Call(Call {
+                    func: Name {
+                        id: "foo".to_owned(),
+                    },
+                    args: vec![],
+                })),
+                op: Operator::Add,
+                right: Box::new(Node::Constant(Constant {
+                    value: Primitive::Int(1),
+                })),
+            }),
+            Node::BinOp(BinOp {
+                left: Box::new(Node::Name(Name {
+                    id: "age".to_owned(),
+                })),
+                op: Operator::Add,
+                right: Box::new(Node::Constant(Constant {
+                    value: Primitive::Int(2),
+                })),
+            }),
+            Node::BinOp(BinOp {
+                left: Box::new(Node::BinOp(BinOp {
+                    left: Box::new(Node::Constant(Constant {
+                        value: Primitive::Int(3),
+                    })),
+                    op: Operator::Sub,
+                    right: Box::new(Node::Constant(Constant {
+                        value: Primitive::Float(2.5),
+                    })),
+                })),
+                op: Operator::Mult,
+                right: Box::new(Node::Constant(Constant {
+                    value: Primitive::Int(4),
+                })),
+            }),
+        ],
     };
 
     let ast = parser.parse(get_tokens(test_case)).unwrap();

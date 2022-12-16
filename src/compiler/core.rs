@@ -65,7 +65,6 @@ impl Compiler {
     }
 
     pub fn compile(&self, module: Module) -> Result<Vec<u8>, String> {
-        // println!("{:#?}", module);
         let mut buff: Vec<u8> = vec![];
         let mut program = vec![];
 

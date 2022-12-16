@@ -38,6 +38,9 @@ fn main() {
         Err(err) => return err.display(&source),
     };
 
+    println!("{:#?}", module);
+    return;
+
     let bytes = match compiler.compile(module) {
         Ok(prog) => prog,
         Err(err) => return println!("{:?}", err),
