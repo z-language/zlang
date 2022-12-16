@@ -1,11 +1,15 @@
 use std::env;
 use std::fs;
+use std::fs::File;
+use std::io::Write;
+use zlang::compiler::Compiler;
 use zlang::parser::Parser;
 use zlang::tokenizer::Tokenizer;
 
 fn main() {
     let mut tokenizer = Tokenizer::new();
     let mut parser = Parser::new();
+    let compiler = Compiler::new();
     let mut args = env::args();
 
     let filename = match args.nth(1) {
@@ -34,5 +38,11 @@ fn main() {
         Err(err) => return err.display(&source),
     };
 
-    println!("{:#?}", module);
+    let bytes = match compiler.compile(module) {
+        Ok(prog) => prog,
+        Err(err) => return println!("{:?}", err),
+    };
+
+    let mut out = File::create("debug/main").unwrap();
+    out.write_all(&bytes).unwrap();
 }

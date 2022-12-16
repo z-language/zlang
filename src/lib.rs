@@ -1,3 +1,4 @@
+pub mod compiler;
 pub mod error;
 mod grammar;
 pub mod parser;

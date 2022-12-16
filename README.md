@@ -5,5 +5,5 @@ It's still in its early stages.
 
 Features:
 - [x] Tokenizer
-- [ ] Parser (WIP)
-- [ ] Compiler
+- [x] Parser
+- [ ] Compiler (WIP)

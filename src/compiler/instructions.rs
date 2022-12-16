@@ -1,0 +1,22 @@
+pub enum Opcode {
+    NOOP = 0x00,
+
+    PUSH = 0x01,
+    LOAD_CONST = 0x02,
+    POP = 0x12,
+    DUP = 0x13,
+
+    ADD = 0x20,
+    SUB = 0x21,
+    MUL = 0x22,
+    DIV = 0x23,
+    MOD = 0x24,
+    INCR = 0x29,
+    JMP = 0x30,
+    JMPE = 0x31,
+    JMPNE = 0x32,
+
+    SYS = 0xfd,
+    DEBUG = 0xfe,
+    HLT = 0xff,
+}
