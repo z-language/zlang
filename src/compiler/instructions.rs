@@ -18,6 +18,9 @@ pub enum Opcode {
     JMPE = 0x31,
     JMPNE = 0x32,
 
+    CALL = 0x40,
+    RETURN = 0x41,
+
     SYS = 0xfd,
     DEBUG = 0xfe,
     HLT = 0xff,
@@ -26,5 +29,4 @@ pub enum Opcode {
 pub enum Type {
     T_STR = 0x01,
     T_INT = 0x02,
-    T_CODE = 0x03,
 }
