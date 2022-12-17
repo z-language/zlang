@@ -91,7 +91,7 @@ pub enum Node {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Primitive {
-    Int(isize),
+    Int(i32),
     Float(f64),
     Str(String),
     Bool(bool),

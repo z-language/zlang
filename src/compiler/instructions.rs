@@ -3,6 +3,8 @@ pub enum Opcode {
 
     PUSH = 0x01,
     LOAD_CONST = 0x02,
+    STORE_NAME = 0x03,
+    LOAD_NAME = 0x04,
     POP = 0x12,
     DUP = 0x13,
 
@@ -19,4 +21,10 @@ pub enum Opcode {
     SYS = 0xfd,
     DEBUG = 0xfe,
     HLT = 0xff,
+}
+
+pub enum Type {
+    T_STR = 0x01,
+    T_INT = 0x02,
+    T_CODE = 0x03,
 }

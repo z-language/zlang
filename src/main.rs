@@ -10,7 +10,7 @@ use zlang::tokenizer::Tokenizer as zLexer;
 fn main() {
     let mut tokenizer = zLexer::new();
     let mut parser = zParser::new();
-    let compiler = zCompiler::new();
+    let mut compiler = zCompiler::new();
     let args = Args::parse();
 
     let source = match fs::read_to_string(&args.file) {

@@ -530,10 +530,9 @@ impl Parser {
                         return Ok(Some(Node::Call(call)));
                     }
                     Type::Equals => return Ok(Some(Node::Assign(self.build_assign(tok)?))),
-                    Type::Nl => return Ok(None),
                     _ => return Ok(Some(Node::Name(self.build_name(&tok)?))),
                 },
-                None => return Ok(None),
+                None => return Ok(Some(Node::Name(self.build_name(&tok)?))),
             },
 
             Type::Nl => Ok(None),
