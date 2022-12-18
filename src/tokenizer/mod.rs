@@ -156,6 +156,16 @@ impl<'a> Tokenizer<'a> {
                     }
                 }
 
+                EQUALS if self.get_offset(1).unwrap_or('0') == EQUALS => {
+                    tokens.push(Token {
+                        line: self.line,
+                        pos: self.pos,
+                        value: String::from("=="),
+                        t_type: Type::Op,
+                    });
+                    self.incr();
+                }
+
                 EQUALS => tokens.push(Token {
                     line: self.line,
                     pos: self.pos,

@@ -77,6 +77,23 @@ fn test_binop_1() {
 }
 
 #[test]
+fn test_return() {
+    let mut parser = Parser::new();
+    let test_case = "return 5";
+
+    let expected = Module {
+        body: vec![Node::Return(Return {
+            value: Box::new(Node::Constant(Constant {
+                value: Primitive::Int(5),
+            })),
+        })],
+    };
+
+    let ast = parser.parse(get_tokens(test_case)).unwrap();
+    assert_eq!(expected, ast);
+}
+
+#[test]
 fn test_binop_2() {
     let mut parser = Parser::new();
     let test_case = "foo() + 1\nage +2\n(3 - 2.5) * 4";

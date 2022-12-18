@@ -18,6 +18,11 @@ pub struct FunctionDef {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub struct Return {
+    pub value: Box<Node>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub struct If {
     pub test: Box<Node>,
     pub run: Box<Node>,
@@ -84,6 +89,7 @@ pub enum Node {
     If(If),
     Scope(Scope),
     Loop(Loop),
+    Return(Return),
 
     Break,
     None,
@@ -103,4 +109,5 @@ pub enum Operator {
     Sub,
     Mult,
     Div,
+    DoubleEquals,
 }

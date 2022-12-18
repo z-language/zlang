@@ -13,6 +13,7 @@ pub enum Opcode {
     MUL = 0x22,
     DIV = 0x23,
     MOD = 0x24,
+    EQ = 0x25,
     INCR = 0x29,
     JMP = 0x30,
     JMPE = 0x31,

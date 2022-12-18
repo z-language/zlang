@@ -223,6 +223,36 @@ fn test_comments() {
 }
 
 #[test]
+fn test_deq() {
+    let mut tokenizer = Tokenizer::new();
+    let test_case = "3 == 3";
+
+    let expected = vec![
+        Token {
+            line: 1,
+            pos: 0,
+            value: "3".to_owned(),
+            t_type: Type::Int,
+        },
+        Token {
+            line: 1,
+            pos: 2,
+            value: "==".to_owned(),
+            t_type: Type::Op,
+        },
+        Token {
+            line: 1,
+            pos: 5,
+            value: "3".to_owned(),
+            t_type: Type::Int,
+        },
+    ];
+
+    let tokens = tokenizer.tokenize(test_case).unwrap();
+    assert_eq!(expected, tokens);
+}
+
+#[test]
 #[should_panic]
 fn test_error() {
     let mut tokenizer = Tokenizer::new();

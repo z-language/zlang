@@ -1,6 +1,6 @@
 use super::ast::{
     Arg, Assign, BinOp, Call, Constant, FunctionDef, If, Loop, Module, Name, Node, Operator,
-    Primitive, Scope, VariableDef,
+    Primitive, Return, Scope, VariableDef,
 };
 use super::Parser;
 use crate::error::{CompilerError, MakeErr};
@@ -338,6 +338,7 @@ impl Parser {
                         "-" => Operator::Sub,
                         "*" => Operator::Mult,
                         "/" => Operator::Div,
+                        "==" => Operator::DoubleEquals,
                         _ => return Err(token.into_err("Unknown token.")),
                     }));
                     self.index += 1;
@@ -477,6 +478,24 @@ impl Parser {
         Ok(Loop { body })
     }
 
+    fn build_return(&mut self, tok: &Token) -> Result<Return, CompilerError> {
+        self.index += 1;
+
+        let token = match self.gettok(0) {
+            Some(tok) => tok,
+            None => return Err(tok.into_err("This return doesn't return anything.")),
+        };
+
+        let value = match self.parse_node(&token)? {
+            Some(ret) => ret,
+            None => return Err(tok.into_err("This return doesn't return anything.")),
+        };
+
+        Ok(Return {
+            value: Box::new(value),
+        })
+    }
+
     fn parse_node(&mut self, tok: &Token) -> Result<Option<Node>, CompilerError> {
         match tok.t_type {
             Type::Keyword => match tok.value.as_str() {
@@ -485,6 +504,7 @@ impl Parser {
                 FLOAT => Ok(Some(Node::Name(Name {
                     id: FLOAT.to_owned(),
                 }))),
+                RETURN => Ok(Some(Node::Return(self.build_return(tok)?))),
                 TRUE | FALSE => Ok(Some(Node::Constant(self.build_constant(tok)?))),
                 VAR => Ok(Some(Node::VariableDef(self.build_var()?))),
                 IF => Ok(Some(Node::If(self.build_if()?))),

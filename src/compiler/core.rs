@@ -1,7 +1,8 @@
 use std::{collections::HashMap, mem::size_of_val};
 
 use crate::parser::ast::{
-    BinOp, Call, Constant, FunctionDef, Module, Name, Node, Operator, Primitive, VariableDef,
+    BinOp, Call, Constant, FunctionDef, Module, Name, Node, Operator, Primitive, Return,
+    VariableDef,
 };
 
 use super::{
@@ -96,6 +97,7 @@ impl Compiler {
             Operator::Sub => Opcode::SUB,
             Operator::Mult => Opcode::MUL,
             Operator::Div => Opcode::DIV,
+            Operator::DoubleEquals => Opcode::EQ,
         };
         buff.push(inst!(op));
 
@@ -196,6 +198,14 @@ impl Compiler {
         Ok(buff)
     }
 
+    fn build_return(&mut self, ret: &Return) -> Result<Vec<u8>, String> {
+        let mut buff = self.parse_node(&ret.value)?;
+
+        buff.push(inst!(Opcode::RETURN));
+
+        Ok(buff)
+    }
+
     fn compile_functions(&mut self, buff_len: usize) -> Vec<u8> {
         let mut vec = vec![];
 
@@ -218,7 +228,7 @@ impl Compiler {
             Node::BinOp(nd) => Ok(self.build_binop(nd)?),
             Node::Constant(nd) => Ok(self.build_constant(nd)?),
             Node::VariableDef(nd) => Ok(self.build_var(nd)?),
-            // Node::FunctionDef(nd) => Ok(self.build_fun(nd)?),
+            Node::Return(nd) => Ok(self.build_return(nd)?),
             Node::Call(nd) => Ok(self.build_call(nd)?),
             Node::Name(nd) => Ok(self.build_name(nd)?),
             _ => return Err(format!("Node {:?} can't be compiled yet.", node)),
