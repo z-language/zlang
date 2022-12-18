@@ -1,7 +1,7 @@
 use std::{collections::HashMap, mem::size_of_val};
 
 use crate::parser::ast::{
-    BinOp, Constant, FunctionDef, Module, Name, Node, Operator, Primitive, VariableDef,
+    BinOp, Call, Constant, FunctionDef, Module, Name, Node, Operator, Primitive, VariableDef,
 };
 
 use super::{
@@ -13,6 +13,9 @@ macro_rules! inst {
     ($x:expr) => {
         $x as u8
     };
+    () => {
+        inst!(Opcode::NOOP)
+    };
 }
 
 impl Compiler {
@@ -22,6 +25,7 @@ impl Compiler {
             constants: vec![],
             function_map: HashMap::new(),
             function_store: vec![],
+            iteration: 0,
         }
     }
 
@@ -127,11 +131,51 @@ impl Compiler {
             func_body.push(inst!(Opcode::DEBUG));
             func_body.push(inst!(Opcode::HLT));
         }
-        self.function_store.push(func_body);
-        self.function_map
-            .insert(fun.name.clone(), (0, self.function_store.len() - 1));
+
+        func_body.push(inst!(Opcode::RETURN));
+
+        let func_in_store = self.function_map.get(&fun.name).unwrap().1;
+
+        self.function_store[func_in_store] = func_body;
 
         Ok(vec![])
+    }
+
+    fn define_fun(&mut self, fun: &FunctionDef) {
+        self.function_store.push(vec![]);
+        self.function_map
+            .insert(fun.name.clone(), (0, self.function_store.len() - 1));
+    }
+
+    fn build_call(&mut self, call: &Call) -> Vec<u8> {
+        if self.iteration == 0 {
+            return vec![0x00, 0x00];
+        }
+
+        let mut buff = vec![inst!(Opcode::CALL)];
+
+        let called_fun = self.function_map.get(&call.func.id).unwrap().0;
+        let constant = self.get_constant(&Primitive::Int(called_fun as i32));
+        buff.push(constant);
+
+        buff
+    }
+
+    fn compile_functions(&mut self, buff_len: usize) -> Vec<u8> {
+        let mut vec = vec![];
+
+        for func in self.function_map.clone() {
+            let values = func.1;
+            let pos = vec.len() + buff_len + 1;
+            self.function_map
+                .entry(func.0)
+                .and_modify(|funct| funct.0 = pos);
+
+            let bytes = &self.function_store[values.1];
+            vec.extend(bytes);
+        }
+
+        vec
     }
 
     fn parse_node(&mut self, node: &Node) -> Result<Vec<u8>, String> {
@@ -139,7 +183,8 @@ impl Compiler {
             Node::BinOp(nd) => Ok(self.build_binop(nd)?),
             Node::Constant(nd) => Ok(self.build_constant(nd)?),
             Node::VariableDef(nd) => Ok(self.build_var(nd)?),
-            Node::FunctionDef(nd) => Ok(self.build_fun(nd)?),
+            // Node::FunctionDef(nd) => Ok(self.build_fun(nd)?),
+            Node::Call(nd) => Ok(self.build_call(nd)),
             Node::Name(nd) => Ok(self.build_name(nd)?),
             _ => return Err(format!("Node: {:?} can't be compiled yet.", node)),
         }
@@ -152,31 +197,43 @@ impl Compiler {
         // Version
         buff.push(0x01);
 
+        let funcs: Vec<&FunctionDef> = module
+            .body
+            .iter()
+            .filter(|node| match node {
+                Node::FunctionDef(_) => true,
+                _ => false,
+            })
+            .map(|node| match node {
+                Node::FunctionDef(fun) => fun,
+                _ => (panic!()),
+            })
+            .collect();
+
         // Build functions
-        for node in &module.body {
-            match node {
-                Node::FunctionDef(_) => self.parse_node(node)?,
-                _ => continue,
-            };
+        funcs.iter().for_each(|fun| self.define_fun(fun));
+        for fun in &funcs {
+            self.build_fun(fun)?;
         }
 
-        for func in self.function_map.clone() {
-            let values = func.1;
-            // Plus two because the program length (2 bytes) and first ins (2 bytes) are inserted later
-            let pos = program.len() + buff.len() + 1;
-            self.function_map
-                .entry(func.0)
-                .and_modify(|funct| funct.0 = pos);
+        self.iteration += 1;
 
-            let bytes = &self.function_store[values.1];
-            program.extend(bytes);
+        // We compile them just to get the size of all functions.
+        self.compile_functions(buff.len());
+
+        for fun in funcs {
+            self.build_fun(fun)?;
         }
+
+        self.iteration += 1;
+
+        // Now we recompile all functions and append them to the program.
+        program.extend(self.compile_functions(buff.len()));
 
         // Call the main func
         program.insert(0, inst!(Opcode::CALL));
         let main_func = self.function_map.get("main").unwrap();
         program.insert(1, self.get_constant(&Primitive::Int(main_func.0 as i32)));
-        println!("{:?}", self.function_map);
 
         // Make program
         for node in module.body {
@@ -195,6 +252,7 @@ impl Compiler {
 
         // Append the whole program
         buff.extend(program);
+        // buff.extend(vec![inst!(), inst!(), inst!(), inst!(), inst!(), inst!()]);
 
         // Size of const pool
         let size_of_consts = (self.constants.len() as i16).to_be_bytes();
@@ -222,7 +280,13 @@ fn make_constant(c: &Primitive) -> Vec<u8> {
             buff.extend(bytes);
         }
         Primitive::Float(_) => todo!(),
-        Primitive::Str(_) => todo!(),
+        Primitive::Str(i) => {
+            buff.push(inst!(Type::T_STR));
+            let size = i.len() as u8;
+            buff.push(size);
+            let bytes = (i.clone().into_bytes()).to_vec();
+            buff.extend(bytes);
+        }
         Primitive::Bool(_) => todo!(),
     }
 

@@ -14,4 +14,6 @@ pub struct Compiler {
     function_store: Vec<Vec<u8>>,
 
     constants: Vec<Primitive>,
+
+    iteration: i32,
 }
