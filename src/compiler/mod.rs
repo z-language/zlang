@@ -7,9 +7,10 @@ mod core;
 mod instructions;
 
 pub struct Compiler {
-    variable_map: Vec<String>,
+    scope: usize,
+    variable_map: Vec<Vec<String>>,
 
-    // name and address of func in const pool and address of func in function_store
+    // name and address of func stored in const pool and address of func in function_store
     function_map: HashMap<String, (usize, usize)>,
     function_store: Vec<Vec<u8>>,
 

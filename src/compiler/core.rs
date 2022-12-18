@@ -21,11 +21,12 @@ macro_rules! inst {
 impl Compiler {
     pub fn new() -> Self {
         Compiler {
-            variable_map: vec![],
+            variable_map: vec![vec![]],
             constants: vec![],
             function_map: HashMap::new(),
             function_store: vec![],
             iteration: 0,
+            scope: 0,
         }
     }
 
@@ -73,17 +74,13 @@ impl Compiler {
     fn build_var(&mut self, var: &VariableDef) -> Result<Vec<u8>, String> {
         let mut buff = vec![];
 
-        self.variable_map.push(var.name.clone());
+        self.variable_map[self.scope].push(var.name.clone());
 
         let value = self.parse_node(&var.value)?;
         buff.extend(value);
 
         buff.push(inst!(Opcode::STORE_NAME));
-        let index = self
-            .variable_map
-            .iter()
-            .position(|x| *x == var.name)
-            .expect("This shouldn't fail...") as u8;
+        let index = self.get_variable_index(&var.name);
         buff.push(index);
         Ok(buff)
     }
@@ -106,21 +103,51 @@ impl Compiler {
     }
 
     fn build_name(&self, name: &Name) -> Result<Vec<u8>, String> {
+        if self.iteration == 0 {
+            return Ok(vec![0x00, 0x00]);
+        }
+
         let mut buff = vec![];
 
         buff.push(inst!(Opcode::LOAD_NAME));
-        let index = self
-            .variable_map
-            .iter()
-            .position(|x| *x == name.id)
-            .expect("This shouldn't fail...") as u8;
+        let index = self.get_variable_index(&name.id);
         buff.push(index);
 
         Ok(buff)
     }
 
+    fn get_variable_index(&self, name: &str) -> u8 {
+        let index = self.variable_map[self.scope]
+            .iter()
+            .position(|x| *x == name)
+            .expect("This shouldn't fail...");
+
+        (index + (self.scope * 10)) as u8
+    }
+
     fn build_fun(&mut self, fun: &FunctionDef) -> Result<Vec<u8>, String> {
+        self.scope += 1;
+        self.variable_map.push(vec![]);
+
         let mut func_body = vec![];
+
+        for arg in &fun.args {
+            let arg_def = match arg {
+                Node::Arg(name) => VariableDef {
+                    name: name.name.clone(),
+                    mutable: false,
+                    value: Box::new(Node::Constant(Constant {
+                        value: Primitive::Int(0),
+                    })),
+                },
+                _ => panic!(),
+            };
+            self.build_var(&arg_def)?;
+            func_body.extend(vec![
+                inst!(Opcode::STORE_NAME),
+                self.get_variable_index(&arg_def.name),
+            ]);
+        }
 
         let body: Result<Vec<Vec<u8>>, String> =
             fun.body.iter().map(|node| self.parse_node(node)).collect();
@@ -138,6 +165,8 @@ impl Compiler {
 
         self.function_store[func_in_store] = func_body;
 
+        self.scope -= 1;
+        self.variable_map.pop();
         Ok(vec![])
     }
 
@@ -147,18 +176,24 @@ impl Compiler {
             .insert(fun.name.clone(), (0, self.function_store.len() - 1));
     }
 
-    fn build_call(&mut self, call: &Call) -> Vec<u8> {
-        if self.iteration == 0 {
-            return vec![0x00, 0x00];
+    fn build_call(&mut self, call: &Call) -> Result<Vec<u8>, String> {
+        let mut buff = vec![];
+        for arg in &call.args {
+            let arg_parsed = self.parse_node(arg)?;
+            buff.extend(arg_parsed);
         }
 
-        let mut buff = vec![inst!(Opcode::CALL)];
+        if self.iteration == 0 {
+            let filler_bytes = 2 + buff.len();
+            return Ok(vec![0x00; filler_bytes]);
+        }
 
+        buff.push(inst!(Opcode::CALL));
         let called_fun = self.function_map.get(&call.func.id).unwrap().0;
         let constant = self.get_constant(&Primitive::Int(called_fun as i32));
         buff.push(constant);
 
-        buff
+        Ok(buff)
     }
 
     fn compile_functions(&mut self, buff_len: usize) -> Vec<u8> {
@@ -184,9 +219,9 @@ impl Compiler {
             Node::Constant(nd) => Ok(self.build_constant(nd)?),
             Node::VariableDef(nd) => Ok(self.build_var(nd)?),
             // Node::FunctionDef(nd) => Ok(self.build_fun(nd)?),
-            Node::Call(nd) => Ok(self.build_call(nd)),
+            Node::Call(nd) => Ok(self.build_call(nd)?),
             Node::Name(nd) => Ok(self.build_name(nd)?),
-            _ => return Err(format!("Node: {:?} can't be compiled yet.", node)),
+            _ => return Err(format!("Node {:?} can't be compiled yet.", node)),
         }
     }
 
@@ -281,10 +316,12 @@ fn make_constant(c: &Primitive) -> Vec<u8> {
         }
         Primitive::Float(_) => todo!(),
         Primitive::Str(i) => {
+            let mut value = i.clone();
+            value.push('\0');
             buff.push(inst!(Type::T_STR));
-            let size = i.len() as u8;
+            let size = value.len() as u8;
             buff.push(size);
-            let bytes = (i.clone().into_bytes()).to_vec();
+            let bytes = (value.into_bytes()).to_vec();
             buff.extend(bytes);
         }
         Primitive::Bool(_) => todo!(),
