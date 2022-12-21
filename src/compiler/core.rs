@@ -1,8 +1,8 @@
 use std::{collections::HashMap, mem::size_of_val};
 
 use crate::parser::ast::{
-    BinOp, Call, Constant, FunctionDef, If, Module, Name, Node, Operator, Primitive, Return, Scope,
-    VariableDef,
+    BinOp, Call, Constant, FunctionDef, If, Loop, Module, Name, Node, Operator, Primitive, Return,
+    Scope, VariableDef,
 };
 
 use super::{
@@ -28,6 +28,7 @@ impl Compiler {
             function_store: vec![],
             iteration: 0,
             scope: 0,
+            loop_store: vec![],
         }
     }
 
@@ -197,37 +198,64 @@ impl Compiler {
         buff.push(body.len() as u8);
         buff.push(inst!(Opcode::JMPT));
         buff.extend(body);
-        buff.extend(orelse);
+        buff.extend(&orelse);
+
+        if !self.loop_store.is_empty() {
+            self.loop_store.last_mut().unwrap().0 += buff.len() - orelse.len();
+        }
 
         Ok(buff)
     }
 
     fn build_scope(&mut self, scope: &Scope) -> Result<Vec<u8>, String> {
         let mut buff = vec![];
-        let mut break_positions = vec![];
 
         for node in &scope.body {
-            match node {
-                Node::Break => {
-                    buff.push(inst!(Opcode::PUSH));
-                    buff.push(0x00);
-                    buff.push(inst!(Opcode::JMPF));
-                    break_positions.push(buff.len() - 2);
-                    continue;
-                }
-                _ => (),
-            };
-
             let bytes = self.parse_node(node)?;
             buff.extend(bytes);
         }
 
-        let len = buff.len() - 2;
+        Ok(buff)
+    }
 
-        for pos in break_positions {
-            buff[pos] = (len - pos) as u8;
+    fn build_break(&self) -> Vec<u8> {
+        let loop_ref = self.loop_store.last().unwrap();
+        if loop_ref.1 == 0 {
+            return vec![0x00; 3];
+        }
+        let mut buff = vec![];
+
+        buff.push(inst!(Opcode::PUSH));
+        buff.push((loop_ref.1 - loop_ref.0) as u8 + 6);
+        buff.push(inst!(Opcode::JMPF));
+
+        buff
+    }
+
+    fn build_loop(&mut self, loop_def: &Loop) -> Result<Vec<u8>, String> {
+        self.loop_store.push((0, 0));
+        let mut buff = vec![];
+
+        for node in &loop_def.body {
+            let bytes = self.parse_node(node)?;
+            buff.extend(bytes);
         }
 
+        self.loop_store.last_mut().unwrap().1 = buff.len();
+        // self.loop_store.last_mut().unwrap().0 = 0;
+        buff.clear();
+
+        for node in &loop_def.body {
+            let bytes = self.parse_node(node)?;
+            self.loop_store.last_mut().unwrap().0 += bytes.len();
+            buff.extend(bytes);
+        }
+
+        buff.push(inst!(Opcode::PUSH));
+        buff.push(buff.len() as u8 + 2);
+        buff.push(inst!(Opcode::JMPB));
+
+        self.loop_store.pop();
         Ok(buff)
     }
 
@@ -287,6 +315,9 @@ impl Compiler {
             Node::Name(nd) => Ok(self.build_name(nd)?),
             Node::If(nd) => Ok(self.build_if(nd)?),
             Node::Scope(nd) => Ok(self.build_scope(nd)?),
+            Node::Loop(nd) => Ok(self.build_loop(nd)?),
+            Node::None => Ok(vec![]),
+            Node::Break => Ok(self.build_break()),
             _ => return Err(format!("Node {:?} can't be compiled yet.", node)),
         }
     }

@@ -463,17 +463,26 @@ impl Parser {
     }
 
     fn build_loop(&mut self) -> Result<Loop, CompilerError> {
-        self.index += 1;
-        let mut token = self.gettok(0).unwrap();
-        while token.t_type == Type::Nl {
-            self.index += 1;
-            token = self.gettok(0).unwrap();
-        }
+        self.index += 2;
 
-        let body = match self.parse_node(&token)? {
-            Some(Node::Scope(scp)) => scp,
-            _ => panic!(),
-        };
+        let mut current = self.gettok(0).unwrap();
+
+        let mut body = vec![];
+
+        while current.t_type != Type::Rbrack {
+            let tok = self.parse_node(&current)?;
+
+            self.index += 1;
+            current = match self.gettok(0) {
+                Some(tok) => tok,
+                None => return Err(current.into_err("Expected a closing bracket!")),
+            };
+
+            body.push(match tok {
+                Some(tok) => tok,
+                None => continue,
+            });
+        }
 
         Ok(Loop { body })
     }

@@ -36,7 +36,7 @@ pub struct Scope {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Loop {
-    pub body: Scope,
+    pub body: Vec<Node>,
 }
 
 #[derive(Debug, PartialEq, Clone)]

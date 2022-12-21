@@ -202,11 +202,7 @@ fn test_loop() {
     let test_case = "loop {loop{}}";
     let expected = Module {
         body: vec![Node::Loop(Loop {
-            body: Scope {
-                body: vec![Node::Loop(Loop {
-                    body: Scope { body: vec![] },
-                })],
-            },
+            body: vec![Node::Loop(Loop { body: vec![] })],
         })],
     };
 
