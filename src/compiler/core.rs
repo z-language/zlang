@@ -1,7 +1,7 @@
 use std::{collections::HashMap, mem::size_of_val};
 
 use crate::parser::ast::{
-    BinOp, Call, Constant, FunctionDef, Module, Name, Node, Operator, Primitive, Return,
+    BinOp, Call, Constant, FunctionDef, If, Module, Name, Node, Operator, Primitive, Return, Scope,
     VariableDef,
 };
 
@@ -178,9 +178,63 @@ impl Compiler {
             .insert(fun.name.clone(), (0, self.function_store.len() - 1));
     }
 
+    fn build_if(&mut self, if_statement: &If) -> Result<Vec<u8>, String> {
+        let mut buff = vec![];
+
+        let test = self.parse_node(&if_statement.test)?;
+        let mut body = self.parse_node(&if_statement.run)?;
+        let orelse = self.parse_node(&if_statement.orelse)?;
+
+        body.push(inst!(Opcode::PUSH));
+        body.push(orelse.len() as u8);
+        body.push(inst!(Opcode::JMPF));
+
+        buff.extend(test);
+        buff.push(inst!(Opcode::PUSH));
+        buff.push(0x00);
+        buff.push(inst!(Opcode::EQ));
+        buff.push(inst!(Opcode::PUSH));
+        buff.push(body.len() as u8);
+        buff.push(inst!(Opcode::JMPT));
+        buff.extend(body);
+        buff.extend(orelse);
+
+        Ok(buff)
+    }
+
+    fn build_scope(&mut self, scope: &Scope) -> Result<Vec<u8>, String> {
+        let mut buff = vec![];
+        let mut break_positions = vec![];
+
+        for node in &scope.body {
+            match node {
+                Node::Break => {
+                    buff.push(inst!(Opcode::PUSH));
+                    buff.push(0x00);
+                    buff.push(inst!(Opcode::JMPF));
+                    break_positions.push(buff.len() - 2);
+                    continue;
+                }
+                _ => (),
+            };
+
+            let bytes = self.parse_node(node)?;
+            buff.extend(bytes);
+        }
+
+        let len = buff.len() - 2;
+
+        for pos in break_positions {
+            buff[pos] = (len - pos) as u8;
+        }
+
+        Ok(buff)
+    }
+
     fn build_call(&mut self, call: &Call) -> Result<Vec<u8>, String> {
         let mut buff = vec![];
-        for arg in &call.args {
+        let args = &call.args.clone();
+        for arg in args.iter().rev() {
             let arg_parsed = self.parse_node(arg)?;
             buff.extend(arg_parsed);
         }
@@ -231,6 +285,8 @@ impl Compiler {
             Node::Return(nd) => Ok(self.build_return(nd)?),
             Node::Call(nd) => Ok(self.build_call(nd)?),
             Node::Name(nd) => Ok(self.build_name(nd)?),
+            Node::If(nd) => Ok(self.build_if(nd)?),
+            Node::Scope(nd) => Ok(self.build_scope(nd)?),
             _ => return Err(format!("Node {:?} can't be compiled yet.", node)),
         }
     }

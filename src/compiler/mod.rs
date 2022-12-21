@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::parser::ast::Primitive;
 
 mod core;
-#[allow(dead_code, non_camel_case_types)]
+#[allow(non_camel_case_types, dead_code)]
 mod instructions;
 
 pub struct Compiler {

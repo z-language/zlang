@@ -16,8 +16,9 @@ pub enum Opcode {
     EQ = 0x25,
     INCR = 0x29,
     JMP = 0x30,
-    JMPE = 0x31,
-    JMPNE = 0x32,
+    JMPF = 0x31,
+    JMPB = 0x32,
+    JMPT = 0x33,
 
     CALL = 0x40,
     RETURN = 0x41,
