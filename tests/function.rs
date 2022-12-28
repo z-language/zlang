@@ -1,6 +1,6 @@
 mod common;
 
-use common::read_file;
+use common::{read_file, run};
 use zlang::{compiler::Compiler, parser::Parser, tokenizer::Tokenizer};
 
 #[test]
@@ -12,5 +12,7 @@ fn function_run() {
 
     let tokens = tokenizer.tokenize(&source).unwrap();
     let ast = parser.parse(tokens).unwrap();
-    let _bytes = compiler.compile(ast).unwrap();
+    let bytes = compiler.compile(ast).unwrap();
+
+    run(bytes, "").unwrap();
 }

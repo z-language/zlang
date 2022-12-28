@@ -12,5 +12,7 @@ fn loop_run() {
 
     let tokens = tokenizer.tokenize(&source).unwrap();
     let ast = parser.parse(tokens).unwrap();
+
+    // We can't run this code because it results in an endless loop.
     let _bytes = compiler.compile(ast).unwrap();
 }
