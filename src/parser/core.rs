@@ -306,7 +306,6 @@ impl Parser {
             Some(tok) => tok,
             None => return Err(tok.into_err("Expected a value.")),
         };
-        self.index += 1;
 
         Ok(Assign {
             target: tok.value.clone(),

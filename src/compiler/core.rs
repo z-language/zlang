@@ -1,4 +1,8 @@
-use std::{collections::HashMap, mem::size_of_val};
+use std::{
+    collections::{hash_map::DefaultHasher, HashMap},
+    hash::{Hash, Hasher},
+    mem::size_of_val,
+};
 
 use crate::parser::ast::{
     Assign, BinOp, Call, Constant, FunctionDef, If, Loop, Module, Name, Node, Operator, Primitive,
@@ -22,14 +26,13 @@ macro_rules! inst {
 impl Compiler {
     pub fn new() -> Self {
         Compiler {
-            variable_map: vec![vec![]],
             constants: vec![],
             function_map: HashMap::new(),
             function_store: vec![],
             iteration: 0,
-            scope: 0,
             loop_store: vec![],
             pos: 0,
+            current_func: vec![],
         }
     }
 
@@ -76,8 +79,6 @@ impl Compiler {
 
     fn build_var(&mut self, var: &VariableDef) -> Result<Vec<u8>, String> {
         let mut buff = vec![];
-
-        self.variable_map[self.scope].push(var.name.clone());
 
         let value = self.parse_node(&var.value)?;
         buff.extend(value);
@@ -134,19 +135,17 @@ impl Compiler {
     }
 
     fn get_variable_index(&self, name: &str) -> u8 {
-        let index = self.variable_map[self.scope]
-            .iter()
-            .position(|x| *x == name)
-            .expect("This shouldn't fail...");
+        let name = String::from(format!("{}.{}", self.current_func.last().unwrap(), name));
+        let mut hasher = DefaultHasher::new();
+        name.hash(&mut hasher);
+        let hash = hasher.finish();
 
-        (index + (self.scope * 10)) as u8
+        (hash % 255) as u8
     }
 
     fn build_fun(&mut self, fun: &FunctionDef) -> Result<Vec<u8>, String> {
-        self.scope += 1;
-        self.variable_map.push(vec![]);
-
         let mut func_body = vec![];
+        self.current_func.push(fun.name.clone());
 
         for arg in &fun.args {
             let arg_def = match arg {
@@ -182,8 +181,7 @@ impl Compiler {
 
         self.function_store[func_in_store] = func_body;
 
-        self.scope -= 1;
-        self.variable_map.pop();
+        self.current_func.pop();
         Ok(vec![])
     }
 
