@@ -74,6 +74,7 @@ impl Compiler {
             Primitive::Bool(_) => todo!(),
         };
 
+        self.pos += 2;
         Ok(buff)
     }
 
@@ -86,6 +87,8 @@ impl Compiler {
         buff.push(inst!(Opcode::STORE_NAME));
         let index = self.get_variable_index(&var.name);
         buff.push(index);
+
+        self.pos += 2;
         Ok(buff)
     }
 
@@ -99,6 +102,7 @@ impl Compiler {
         let index = self.get_variable_index(&assign.target);
         buff.push(index);
 
+        self.pos = 2;
         Ok(buff)
     }
 
@@ -117,10 +121,11 @@ impl Compiler {
         };
         buff.push(inst!(op));
 
+        self.pos += 1;
         Ok(buff)
     }
 
-    fn build_name(&self, name: &Name) -> Result<Vec<u8>, String> {
+    fn build_name(&mut self, name: &Name) -> Result<Vec<u8>, String> {
         if self.iteration == 0 {
             return Ok(vec![0x00, 0x00]);
         }
@@ -131,6 +136,7 @@ impl Compiler {
         let index = self.get_variable_index(&name.id);
         buff.push(index);
 
+        self.pos += 2;
         Ok(buff)
     }
 
@@ -195,7 +201,10 @@ impl Compiler {
         let mut buff = vec![];
 
         let test = self.parse_node(&if_statement.test)?;
+        // later push inst after test
+        self.pos += 6;
         let mut body = self.parse_node(&if_statement.run)?;
+        self.pos += 3;
         let orelse = self.parse_node(&if_statement.orelse)?;
 
         body.push(inst!(Opcode::PUSH));
@@ -226,15 +235,21 @@ impl Compiler {
         Ok(buff)
     }
 
-    fn build_break(&self) -> Vec<u8> {
+    fn build_break(&mut self) -> Vec<u8> {
         let loop_ref = self.loop_store.last().unwrap();
         if loop_ref.1 == 0 {
             return vec![0x00; 3];
         }
 
-        let current = loop_ref.1 - (self.pos - loop_ref.0) - 2;
-        let buff = vec![inst!(Opcode::PUSH), current as u8, inst!(Opcode::JMPF)];
+        println!("len: {}", loop_ref.1);
+        println!("starting pos: {}", loop_ref.0);
+        println!("current: {}", self.pos);
+        // let skip = loop_ref.1 - (self.pos - loop_ref.0) - 2;
+        let skip = loop_ref.1 - (self.pos);
+        println!("skip: {}", skip);
+        let buff = vec![inst!(Opcode::PUSH), skip as u8, inst!(Opcode::JMPF)];
 
+        self.pos += 3;
         buff
     }
 
@@ -242,12 +257,15 @@ impl Compiler {
         self.loop_store.push((0, 0));
         let mut len = 0;
 
+        self.loop_store.last_mut().unwrap().0 = self.pos;
+
         for node in &loop_def.body {
             len += self.parse_node(node)?.len();
         }
 
+        self.pos = 0;
+
         self.loop_store.last_mut().unwrap().1 = len;
-        self.loop_store.last_mut().unwrap().0 = self.pos;
 
         let mut buff = vec![];
         for node in &loop_def.body {
@@ -261,6 +279,7 @@ impl Compiler {
         buff.push(inst!(Opcode::JMPB));
 
         self.loop_store.pop();
+        self.pos += 3;
         Ok(buff)
     }
 
@@ -282,6 +301,7 @@ impl Compiler {
         let constant = self.get_constant(&Primitive::Int(called_fun as i32));
         buff.push(constant);
 
+        self.pos += 2;
         Ok(buff)
     }
 
@@ -290,6 +310,7 @@ impl Compiler {
 
         buff.push(inst!(Opcode::RETURN));
 
+        self.pos += 1;
         Ok(buff)
     }
 
@@ -327,8 +348,6 @@ impl Compiler {
             _ => return Err(format!("Node {:?} can't be compiled yet.", node)),
         };
 
-        self.pos += bytes.len();
-
         Ok(bytes)
     }
 
@@ -356,6 +375,7 @@ impl Compiler {
         }
 
         self.iteration += 1;
+        self.pos = 0;
 
         // We compile them just to get the size of all functions.
         self.compile_functions(buff.len());
