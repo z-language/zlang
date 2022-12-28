@@ -1,3 +1,4 @@
+#[repr(u8)]
 pub enum Opcode {
     NOOP = 0x00,
 

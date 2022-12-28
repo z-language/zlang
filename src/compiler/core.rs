@@ -1,8 +1,8 @@
 use std::{collections::HashMap, mem::size_of_val};
 
 use crate::parser::ast::{
-    BinOp, Call, Constant, FunctionDef, If, Loop, Module, Name, Node, Operator, Primitive, Return,
-    Scope, VariableDef,
+    Assign, BinOp, Call, Constant, FunctionDef, If, Loop, Module, Name, Node, Operator, Primitive,
+    Return, Scope, VariableDef,
 };
 
 use super::{
@@ -29,6 +29,7 @@ impl Compiler {
             iteration: 0,
             scope: 0,
             loop_store: vec![],
+            pos: 0,
         }
     }
 
@@ -84,6 +85,19 @@ impl Compiler {
         buff.push(inst!(Opcode::STORE_NAME));
         let index = self.get_variable_index(&var.name);
         buff.push(index);
+        Ok(buff)
+    }
+
+    fn build_assign(&mut self, assign: &Assign) -> Result<Vec<u8>, String> {
+        let mut buff = vec![];
+
+        let value = self.parse_node(&assign.value)?;
+        buff.extend(value);
+
+        buff.push(inst!(Opcode::STORE_NAME));
+        let index = self.get_variable_index(&assign.target);
+        buff.push(index);
+
         Ok(buff)
     }
 
@@ -190,7 +204,7 @@ impl Compiler {
         body.push(orelse.len() as u8);
         body.push(inst!(Opcode::JMPF));
 
-        buff.extend(test);
+        buff.extend(&test);
         buff.push(inst!(Opcode::PUSH));
         buff.push(0x00);
         buff.push(inst!(Opcode::EQ));
@@ -198,11 +212,7 @@ impl Compiler {
         buff.push(body.len() as u8);
         buff.push(inst!(Opcode::JMPT));
         buff.extend(body);
-        buff.extend(&orelse);
-
-        if !self.loop_store.is_empty() {
-            self.loop_store.last_mut().unwrap().0 += buff.len() - orelse.len();
-        }
+        buff.extend(orelse);
 
         Ok(buff)
     }
@@ -223,28 +233,25 @@ impl Compiler {
         if loop_ref.1 == 0 {
             return vec![0x00; 3];
         }
-        let mut buff = vec![];
 
-        buff.push(inst!(Opcode::PUSH));
-        buff.push((loop_ref.1 - loop_ref.0) as u8 + 6);
-        buff.push(inst!(Opcode::JMPF));
+        let current = loop_ref.1 - (self.pos - loop_ref.0) - 2;
+        let buff = vec![inst!(Opcode::PUSH), current as u8, inst!(Opcode::JMPF)];
 
         buff
     }
 
     fn build_loop(&mut self, loop_def: &Loop) -> Result<Vec<u8>, String> {
         self.loop_store.push((0, 0));
-        let mut buff = vec![];
+        let mut len = 0;
 
         for node in &loop_def.body {
-            let bytes = self.parse_node(node)?;
-            buff.extend(bytes);
+            len += self.parse_node(node)?.len();
         }
 
-        self.loop_store.last_mut().unwrap().1 = buff.len();
-        // self.loop_store.last_mut().unwrap().0 = 0;
-        buff.clear();
+        self.loop_store.last_mut().unwrap().1 = len;
+        self.loop_store.last_mut().unwrap().0 = self.pos;
 
+        let mut buff = vec![];
         for node in &loop_def.body {
             let bytes = self.parse_node(node)?;
             self.loop_store.last_mut().unwrap().0 += bytes.len();
@@ -306,20 +313,25 @@ impl Compiler {
     }
 
     fn parse_node(&mut self, node: &Node) -> Result<Vec<u8>, String> {
-        match node {
-            Node::BinOp(nd) => Ok(self.build_binop(nd)?),
-            Node::Constant(nd) => Ok(self.build_constant(nd)?),
-            Node::VariableDef(nd) => Ok(self.build_var(nd)?),
-            Node::Return(nd) => Ok(self.build_return(nd)?),
-            Node::Call(nd) => Ok(self.build_call(nd)?),
-            Node::Name(nd) => Ok(self.build_name(nd)?),
-            Node::If(nd) => Ok(self.build_if(nd)?),
-            Node::Scope(nd) => Ok(self.build_scope(nd)?),
-            Node::Loop(nd) => Ok(self.build_loop(nd)?),
-            Node::None => Ok(vec![]),
-            Node::Break => Ok(self.build_break()),
+        let bytes = match node {
+            Node::BinOp(nd) => self.build_binop(nd)?,
+            Node::Constant(nd) => self.build_constant(nd)?,
+            Node::VariableDef(nd) => self.build_var(nd)?,
+            Node::Assign(nd) => self.build_assign(nd)?,
+            Node::Return(nd) => self.build_return(nd)?,
+            Node::Call(nd) => self.build_call(nd)?,
+            Node::Name(nd) => self.build_name(nd)?,
+            Node::If(nd) => self.build_if(nd)?,
+            Node::Scope(nd) => self.build_scope(nd)?,
+            Node::Loop(nd) => self.build_loop(nd)?,
+            Node::None => vec![],
+            Node::Break => self.build_break(),
             _ => return Err(format!("Node {:?} can't be compiled yet.", node)),
-        }
+        };
+
+        self.pos += bytes.len();
+
+        Ok(bytes)
     }
 
     pub fn compile(&mut self, module: Module) -> Result<Vec<u8>, String> {
@@ -332,13 +344,10 @@ impl Compiler {
         let funcs: Vec<&FunctionDef> = module
             .body
             .iter()
-            .filter(|node| match node {
-                Node::FunctionDef(_) => true,
-                _ => false,
-            })
+            .filter(|node| matches!(node, Node::FunctionDef(_)))
             .map(|node| match node {
                 Node::FunctionDef(fun) => fun,
-                _ => (panic!()),
+                _ => panic!(),
             })
             .collect();
 
