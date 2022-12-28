@@ -329,6 +329,7 @@ impl Parser {
         let mut expr_unordered: Vec<ExprPart> = vec![];
         self.building_binop[self.scope] = true;
 
+        let mut need_closing = 0;
         while let Some(token) = self.gettok(0) {
             match token.t_type {
                 Type::Op => {
@@ -345,12 +346,13 @@ impl Parser {
                 }
                 Type::Int | Type::String | Type::Float | Type::Word => (),
                 Type::Lparen => {
+                    need_closing += 1;
                     expr_unordered.push(ExprPart::Lpar);
                     self.index += 1;
                     continue;
                 }
                 Type::Rparen => {
-                    if self.scope != 0 {
+                    if need_closing == 0 {
                         break;
                     }
                     expr_unordered.push(ExprPart::Rpar);
@@ -390,7 +392,10 @@ impl Parser {
                 }
                 ExprPart::Operand(operand) => stack.push(operand),
 
-                _ => panic!(),
+                other => {
+                    println!("Unexpected token: {:?}", other);
+                    panic!()
+                }
             }
         }
 

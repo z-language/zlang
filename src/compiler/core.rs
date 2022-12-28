@@ -81,8 +81,12 @@ impl Compiler {
     fn build_var(&mut self, var: &VariableDef) -> Result<Vec<u8>, String> {
         let mut buff = vec![];
 
-        let value = self.parse_node(&var.value)?;
-        buff.extend(value);
+        if matches!(*var.value, Node::None) {
+            buff.extend([inst!(Opcode::PUSH), 0]);
+        } else {
+            let value = self.parse_node(&var.value)?;
+            buff.extend(value);
+        }
 
         buff.push(inst!(Opcode::STORE_NAME));
         let index = self.get_variable_index(&var.name);
@@ -241,12 +245,7 @@ impl Compiler {
             return vec![0x00; 3];
         }
 
-        println!("len: {}", loop_ref.1);
-        println!("starting pos: {}", loop_ref.0);
-        println!("current: {}", self.pos);
-        // let skip = loop_ref.1 - (self.pos - loop_ref.0) - 2;
         let skip = loop_ref.1 - (self.pos);
-        println!("skip: {}", skip);
         let buff = vec![inst!(Opcode::PUSH), skip as u8, inst!(Opcode::JMPF)];
 
         self.pos += 3;
