@@ -1,6 +1,6 @@
 use std::fmt::{self, Display};
 
-const LINE_PADDING: usize = 10;
+const LINE_PADDING: usize = 3;
 
 #[derive(Debug, Clone)]
 pub struct CompilerError {

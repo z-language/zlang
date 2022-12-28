@@ -110,4 +110,5 @@ pub enum Operator {
     Mult,
     Div,
     DoubleEquals,
+    Mod,
 }

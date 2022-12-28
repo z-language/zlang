@@ -122,6 +122,7 @@ impl Compiler {
             Operator::Mult => Opcode::MUL,
             Operator::Div => Opcode::DIV,
             Operator::DoubleEquals => Opcode::EQ,
+            Operator::Mod => Opcode::MOD,
         };
         buff.push(inst!(op));
 

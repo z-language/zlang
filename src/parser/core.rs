@@ -339,6 +339,7 @@ impl Parser {
                         "*" => Operator::Mult,
                         "/" => Operator::Div,
                         "==" => Operator::DoubleEquals,
+                        "%" => Operator::Mod,
                         _ => return Err(token.into_err("Unknown token.")),
                     }));
                     self.index += 1;

@@ -10,6 +10,7 @@ pub const COLON: char = ':';
 pub const FORWARD_SLASH: char = '/';
 pub const MINUS: char = '-';
 pub const PLUS: char = '+';
+pub const MOD: char = '%';
 pub const STAR: char = '*';
 pub const GREATER_THAN: char = '>';
 pub const EQUALS: char = '=';

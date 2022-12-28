@@ -166,6 +166,13 @@ impl<'a> Tokenizer<'a> {
                     self.incr();
                 }
 
+                MOD => tokens.push(Token {
+                    line: self.line,
+                    pos: self.pos,
+                    value: String::from(ch),
+                    t_type: Type::Op,
+                }),
+
                 EQUALS => tokens.push(Token {
                     line: self.line,
                     pos: self.pos,
