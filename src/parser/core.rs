@@ -340,6 +340,10 @@ impl Parser {
                         "/" => Operator::Div,
                         "==" => Operator::DoubleEquals,
                         "%" => Operator::Mod,
+                        ">" => Operator::Greater,
+                        ">=" => Operator::GreaterEquals,
+                        "<" => Operator::Less,
+                        "<=" => Operator::LessEquals,
                         _ => return Err(token.into_err("Unknown token.")),
                     }));
                     self.index += 1;

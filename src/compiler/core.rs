@@ -123,6 +123,10 @@ impl Compiler {
             Operator::Div => Opcode::DIV,
             Operator::DoubleEquals => Opcode::EQ,
             Operator::Mod => Opcode::MOD,
+            Operator::Greater => Opcode::GREATER_THAN,
+            Operator::GreaterEquals => Opcode::GREATER_OR_EQ,
+            Operator::Less => Opcode::LESS_THAN,
+            Operator::LessEquals => Opcode::LESS_OR_EQ,
         };
         buff.push(inst!(op));
 

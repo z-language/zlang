@@ -154,6 +154,7 @@ impl<'a> Tokenizer<'a> {
                             None => break,
                         }
                     }
+                    self.decr();
                 }
 
                 EQUALS if self.get_offset(1).unwrap_or('0') == EQUALS => {
@@ -165,6 +166,40 @@ impl<'a> Tokenizer<'a> {
                     });
                     self.incr();
                 }
+
+                GREATER_THAN if self.get_offset(1).unwrap_or('0') == EQUALS => {
+                    tokens.push(Token {
+                        line: self.line,
+                        pos: self.pos,
+                        value: String::from(">="),
+                        t_type: Type::Op,
+                    });
+                    self.incr();
+                }
+
+                LESS_THAN if self.get_offset(1).unwrap_or('0') == EQUALS => {
+                    tokens.push(Token {
+                        line: self.line,
+                        pos: self.pos,
+                        value: String::from("<="),
+                        t_type: Type::Op,
+                    });
+                    self.incr();
+                }
+
+                GREATER_THAN => tokens.push(Token {
+                    line: self.line,
+                    pos: self.pos,
+                    value: String::from(ch),
+                    t_type: Type::Op,
+                }),
+
+                LESS_THAN => tokens.push(Token {
+                    line: self.line,
+                    pos: self.pos,
+                    value: String::from(ch),
+                    t_type: Type::Op,
+                }),
 
                 MOD => tokens.push(Token {
                     line: self.line,
