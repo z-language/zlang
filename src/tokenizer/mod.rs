@@ -28,6 +28,9 @@ impl<'a> Tokenizer<'a> {
         let mut tokens: Vec<Token> = vec![];
 
         self.source = source;
+        self.line = 1;
+        self.pos = 0;
+        self.index = 0;
         self.len = self.source.len();
 
         while self.index < self.len {
@@ -222,18 +225,21 @@ impl<'a> Tokenizer<'a> {
                     t_type: Type::Op,
                 }),
 
-                case if case.is_digit(10) => {
+                case if case.is_numeric() => {
                     let mut content = String::new();
                     let pos = self.pos;
                     let mut had_point = false;
-                    while ch.is_digit(10) || ch == DOT {
+                    while ch.is_numeric() || ch == DOT || ch == UNDERSCORE {
                         if ch == DOT {
                             if had_point {
                                 return Err(self.throw("A number can only have one decimal point."));
                             }
                             had_point = true;
                         }
-                        content.push(ch);
+
+                        if ch != UNDERSCORE {
+                            content.push(ch);
+                        }
 
                         self.incr();
 

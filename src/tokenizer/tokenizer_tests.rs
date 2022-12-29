@@ -182,6 +182,36 @@ fn test_decimal_error() {
 }
 
 #[test]
+fn test_num_formatting() {
+    let mut tokenizer = Tokenizer::new();
+    {
+        let test_case = "1_000_000";
+        let tokens = tokenizer.tokenize(test_case).unwrap();
+        let expected = vec![Token {
+            line: 1,
+            pos: 0,
+            value: "1000000".to_owned(),
+            t_type: Type::Int,
+        }];
+
+        assert_eq!(expected, tokens);
+    }
+
+    {
+        let test_case = "1___300_23400_";
+        let tokens = tokenizer.tokenize(test_case).unwrap();
+        let expected = vec![Token {
+            line: 1,
+            pos: 0,
+            value: "130023400".to_owned(),
+            t_type: Type::Int,
+        }];
+
+        assert_eq!(expected, tokens);
+    }
+}
+
+#[test]
 fn test_symbols() {
     let mut tokenizer = Tokenizer::new();
     let test_case = "-> -> :";
