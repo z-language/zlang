@@ -6,7 +6,12 @@ It's still in its early stages.
 Features:
 - [x] Tokenizer
 - [x] Parser
-- [ ] Compiler (WIP)
+- [x] Compiler
+
+TODO:
+- [ ] Implement all operators
+- [ ] Compiler optimizations
+- [ ] CODE CLEANUP!
 
 ## A QUICK INTRODUCTION
 

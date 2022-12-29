@@ -140,7 +140,7 @@ impl<'a> Tokenizer<'a> {
                     tokens.push(Token {
                         line: self.line,
                         pos: self.pos,
-                        value: "->".to_string(),
+                        value: "->".to_owned(),
                         t_type: Type::Arrow,
                     });
                     self.incr();

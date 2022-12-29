@@ -1,0 +1,34 @@
+fun do() {}
+fun doElse() {
+    print("doing else")
+}
+
+// compiler defined
+fun print(val: string) {
+    val
+}
+
+fun main() {
+    var cond = 1
+    var i = if cond { 5 } else { 6 }
+
+    if cond {
+        print("yes")
+    }
+    else {}
+
+    if cond == 3 {}
+    else if cond == 63 {}
+    else {
+        print("maybe")
+    }
+
+    if cond {
+        // ...
+    }
+
+    if cond { do() }
+    if cond == 0 { do() } else { doElse() }
+
+    print(i)
+}
