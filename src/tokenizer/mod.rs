@@ -1,9 +1,25 @@
-use self::token::{Token, Type};
+use self::token::{SourcePos, Token, Type};
 use crate::{error::CompilerError, grammar::*};
 
 pub mod token;
 #[cfg(test)]
 mod tokenizer_tests;
+
+#[macro_export]
+macro_rules! pos {
+    ($x:expr, $y:expr) => {
+        SourcePos {
+            line: $y,
+            column: $x,
+        }
+    };
+    ($self:ident) => {
+        SourcePos {
+            line: $self.line,
+            column: $self.pos,
+        }
+    };
+}
 
 pub struct Tokenizer<'a> {
     source: &'a str,
@@ -40,41 +56,29 @@ impl<'a> Tokenizer<'a> {
 
             match ch {
                 OPEN_PAREN => tokens.push(Token {
-                    line: self.line,
-                    pos: self.pos,
-                    value: ch.to_string(),
-                    t_type: Type::Lparen,
+                    pos: pos!(self),
+                    value: Type::Lparen,
                 }),
                 CLOSED_PAREN => tokens.push(Token {
-                    line: self.line,
-                    pos: self.pos,
-                    value: ch.to_string(),
-                    t_type: Type::Rparen,
+                    pos: pos!(self),
+                    value: Type::Rparen,
                 }),
                 OPEN_CBR => tokens.push(Token {
-                    line: self.line,
-                    pos: self.pos,
-                    value: ch.to_string(),
-                    t_type: Type::Lbrack,
+                    pos: pos!(self),
+                    value: Type::Lbrack,
                 }),
                 CLOSED_CBR => tokens.push(Token {
-                    line: self.line,
-                    pos: self.pos,
-                    value: ch.to_string(),
-                    t_type: Type::Rbrack,
+                    pos: pos!(self),
+                    value: Type::Rbrack,
                 }),
                 COMMA => tokens.push(Token {
-                    line: self.line,
-                    pos: self.pos,
-                    value: ch.to_string(),
-                    t_type: Type::Comma,
+                    pos: pos!(self),
+                    value: Type::Comma,
                 }),
                 NL => {
                     tokens.push(Token {
-                        line: self.line,
-                        pos: self.pos,
-                        value: ch.to_string(),
-                        t_type: Type::Nl,
+                        pos: pos!(self),
+                        value: Type::Nl,
                     });
                     self.line += 1;
                     self.pos = 0;
@@ -119,29 +123,23 @@ impl<'a> Tokenizer<'a> {
                         }
                     }
                     tokens.push(Token {
-                        line: self.line,
-                        pos: self.pos - len,
-                        value: word,
-                        t_type: Type::String,
+                        pos: pos!(self.pos - len, self.line),
+                        value: Type::String(word),
                     });
                 }
 
                 SPACE => (),
 
                 COLON => tokens.push(Token {
-                    line: self.line,
-                    pos: self.pos,
-                    value: ch.to_string(),
-                    t_type: Type::DoubleDot,
+                    pos: pos!(self),
+                    value: Type::DoubleDot,
                 }),
 
                 // Matches on arrow
                 MINUS if self.get_offset(1).unwrap_or('0') == GREATER_THAN => {
                     tokens.push(Token {
-                        line: self.line,
-                        pos: self.pos,
-                        value: "->".to_owned(),
-                        t_type: Type::Arrow,
+                        pos: pos!(self),
+                        value: Type::Arrow,
                     });
                     self.incr();
                     self.incr();
@@ -162,67 +160,51 @@ impl<'a> Tokenizer<'a> {
 
                 EQUALS if self.get_offset(1).unwrap_or('0') == EQUALS => {
                     tokens.push(Token {
-                        line: self.line,
-                        pos: self.pos,
-                        value: String::from("=="),
-                        t_type: Type::Op,
+                        pos: pos!(self),
+                        value: Type::Op("==".to_owned()),
                     });
                     self.incr();
                 }
 
                 GREATER_THAN if self.get_offset(1).unwrap_or('0') == EQUALS => {
                     tokens.push(Token {
-                        line: self.line,
-                        pos: self.pos,
-                        value: String::from(">="),
-                        t_type: Type::Op,
+                        pos: pos!(self),
+                        value: Type::Op(">=".to_owned()),
                     });
                     self.incr();
                 }
 
                 LESS_THAN if self.get_offset(1).unwrap_or('0') == EQUALS => {
                     tokens.push(Token {
-                        line: self.line,
-                        pos: self.pos,
-                        value: String::from("<="),
-                        t_type: Type::Op,
+                        pos: pos!(self),
+                        value: Type::Op("<=".to_owned()),
                     });
                     self.incr();
                 }
 
                 GREATER_THAN => tokens.push(Token {
-                    line: self.line,
-                    pos: self.pos,
-                    value: String::from(ch),
-                    t_type: Type::Op,
+                    pos: pos!(self),
+                    value: Type::Op(ch.to_string()),
                 }),
 
                 LESS_THAN => tokens.push(Token {
-                    line: self.line,
-                    pos: self.pos,
-                    value: String::from(ch),
-                    t_type: Type::Op,
+                    pos: pos!(self),
+                    value: Type::Op(ch.to_string()),
                 }),
 
                 MOD => tokens.push(Token {
-                    line: self.line,
-                    pos: self.pos,
-                    value: String::from(ch),
-                    t_type: Type::Op,
+                    pos: pos!(self),
+                    value: Type::Op(ch.to_string()),
                 }),
 
                 EQUALS => tokens.push(Token {
-                    line: self.line,
-                    pos: self.pos,
-                    value: String::from(ch),
-                    t_type: Type::Equals,
+                    pos: pos!(self),
+                    value: Type::Equals,
                 }),
 
                 PLUS | STAR | FORWARD_SLASH | MINUS => tokens.push(Token {
-                    line: self.line,
-                    pos: self.pos,
-                    value: String::from(ch),
-                    t_type: Type::Op,
+                    pos: pos!(self),
+                    value: Type::Op(ch.to_string()),
                 }),
 
                 case if case.is_numeric() => {
@@ -253,10 +235,12 @@ impl<'a> Tokenizer<'a> {
                     self.decr();
 
                     tokens.push(Token {
-                        line: self.line,
-                        pos,
-                        value: content,
-                        t_type: if had_point { Type::Float } else { Type::Int },
+                        pos: pos!(pos, self.line),
+                        value: if had_point {
+                            Type::Float(content)
+                        } else {
+                            Type::Int(content)
+                        },
                     })
                 }
 
@@ -278,14 +262,12 @@ impl<'a> Tokenizer<'a> {
                     self.decr();
 
                     tokens.push(Token {
-                        line: self.line,
-                        pos,
-                        t_type: if is_keyword(&content) {
-                            Type::Keyword
+                        pos: pos!(pos, self.line),
+                        value: if is_keyword(&content) {
+                            Type::Keyword(content)
                         } else {
-                            Type::Word
+                            Type::Word(content)
                         },
-                        value: content,
                     })
                 }
 

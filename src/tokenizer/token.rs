@@ -1,65 +1,55 @@
-use std::fmt::Display;
-
 use crate::error::{CompilerError, MakeErr};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
-    Keyword,
-    Word,
-
+    Keyword(String),
+    Word(String),
     Lparen,
     Rparen,
-
     Nl,
-
     Lbrack,
     Rbrack,
-
-    Op,
+    Op(String),
     Arrow,
     DoubleDot,
     Comma,
     Equals,
 
-    String,
-    Int,
-    Float,
+    String(String),
+    Int(String),
+    Float(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SourcePos {
+    pub line: u32,
+    pub column: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Token {
-    pub line: u32,
-    pub pos: u32,
-    pub value: String,
-    pub t_type: Type,
+    pub pos: SourcePos,
+    pub value: Type,
 }
 
 impl MakeErr for Token {
     fn into_err(&self, message: &str) -> CompilerError {
         CompilerError::new(
-            self.line as usize,
-            self.pos as usize,
-            self.value.len(),
+            self.pos.line as usize,
+            self.pos.column as usize,
+            // TODO: self.value.len(),
+            1,
             message,
         )
     }
 
     fn into_err_offset(&self, offset: i32, message: &str) -> CompilerError {
         CompilerError::new(
-            self.line as usize,
-            ((self.pos as i32) + offset) as usize,
-            self.value.len(),
+            self.pos.line as usize,
+            ((self.pos.column as i32) + offset) as usize,
+            // TODO: self.value.len(),
+            1,
             message,
-        )
-    }
-}
-
-impl Display for Token {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Token {{value: \"{}\", type: \"{:?}\"}}",
-            self.value, self.t_type
         )
     }
 }

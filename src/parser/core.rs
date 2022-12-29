@@ -31,10 +31,11 @@ impl Parser {
         self.index += 1;
         let name = match self.gettok(0) {
             Some(name) => {
-                if name.t_type != Type::Word {
+                if let Type::Word(name) = name.value {
+                    name
+                } else {
                     return Err(name.into_err("Expected a word for function name."));
                 }
-                name
             }
             None => {
                 panic!()
@@ -42,7 +43,7 @@ impl Parser {
         };
 
         let mut definition = FunctionDef {
-            name: name.value.clone(),
+            name,
             args: vec![],
             body: vec![],
             returns: Box::from(Node::None),
@@ -54,13 +55,16 @@ impl Parser {
         // TODO: code cleanup
         let mut current = match self.gettok(0) {
             Some(tok) => tok,
-            None => return Err(name.into_err("Arg error.")), // + 1
+            None => panic!(),
         };
-        while current.t_type != Type::Rparen {
-            if current.t_type != Type::Word {
+
+        while !matches!(current.value, Type::Rparen) {
+            let name = if let Type::Word(name) = current.value {
+                name
+            } else {
                 return Err(current.into_err("Arg name should be a word!"));
-            }
-            let name = current.value;
+            };
+
             self.index += 1;
             current = match self.gettok(0) {
                 Some(tok) => tok,
@@ -70,7 +74,7 @@ impl Parser {
                     );
                 }
             };
-            if current.t_type != Type::DoubleDot {
+            if !matches!(current.value, Type::DoubleDot) {
                 return Err(current.into_err("Please specify the type of this argument!"));
             }
             self.index += 1;
@@ -82,7 +86,7 @@ impl Parser {
                     )
                 }
             };
-            if current.t_type == Type::Rparen {
+            if matches!(current.value, Type::Rparen) {
                 return Err(current.into_err("Please specify a type!"));
             }
             let annotation = match self.parse_node(&current)? {
@@ -103,7 +107,7 @@ impl Parser {
             self.index += 1;
             current = self.gettok(0).unwrap();
 
-            if current.t_type == Type::Comma {
+            if matches!(current.value, Type::Comma) {
                 self.index += 1;
                 current = match self.gettok(0) {
                     Some(tok) => tok,
@@ -115,10 +119,10 @@ impl Parser {
         self.index += 1;
 
         if let Some(tok) = self.gettok(0) {
-            if tok.t_type == Type::Arrow {
+            if matches!(tok.value, Type::Arrow) {
                 self.index += 1;
                 let tok = self.gettok(0).unwrap();
-                match tok.t_type {
+                match tok.value {
                     Type::Lbrack => {
                         return Err(current.into_err_offset(-1, "Expected a return type!"))
                     }
@@ -143,7 +147,7 @@ impl Parser {
             None => return Err(current.into_err_offset(1, "Expected a function body!")),
         };
 
-        while current.t_type != Type::Rbrack {
+        while !matches!(current.value, Type::Rbrack) {
             let tok = self.parse_node(&current)?;
 
             self.index += 1;
@@ -162,7 +166,12 @@ impl Parser {
     }
 
     fn build_fcall(&mut self) -> Result<Call, CompilerError> {
-        let name = self.gettok(0).unwrap();
+        let name = if let Type::Word(name) = self.gettok(0).unwrap().value {
+            name
+        } else {
+            panic!()
+        };
+
         let mut args = vec![];
 
         self.building_binop.push(false);
@@ -174,7 +183,7 @@ impl Parser {
         self.index += 1;
 
         while let Some(token) = self.gettok(0) {
-            match token.t_type {
+            match token.value {
                 Type::Comma => {
                     self.index += 1;
                     continue;
@@ -193,31 +202,31 @@ impl Parser {
         self.scope -= 1;
 
         Ok(Call {
-            func: Name { id: name.value },
+            func: Name { id: name },
             args,
         })
     }
 
     fn build_constant(&self, tok: &Token) -> Result<Constant, CompilerError> {
-        match tok.t_type {
-            Type::String => Ok(Constant {
-                value: Primitive::Str(tok.value.clone()),
+        match &tok.value {
+            Type::String(val) => Ok(Constant {
+                value: Primitive::Str(val.clone()),
             }),
-            Type::Int => {
-                let val = tok.value.parse().expect("This shouldn't fail...");
+            Type::Int(val) => {
+                let val = val.parse().expect("This shouldn't fail...");
 
                 Ok(Constant {
                     value: Primitive::Int(val),
                 })
             }
-            Type::Float => {
-                let val = tok.value.parse().expect("This shouldn't fail...");
+            Type::Float(val) => {
+                let val = val.parse().expect("This shouldn't fail...");
 
                 Ok(Constant {
                     value: Primitive::Float(val),
                 })
             }
-            Type::Keyword => match tok.value.as_str() {
+            Type::Keyword(val) => match val.as_str() {
                 "true" => Ok(Constant {
                     value: Primitive::Bool(true),
                 }),
@@ -236,18 +245,21 @@ impl Parser {
 
         let mut mutable = false;
         if let Some(tok) = self.gettok(0) {
-            if tok.t_type == Type::Keyword && tok.value == "mut" {
-                mutable = true;
-                self.index += 1;
+            if let Type::Keyword(word) = tok.value {
+                if word == "mut" {
+                    mutable = true;
+                    self.index += 1;
+                }
             }
         }
 
         let name = match self.gettok(0) {
             Some(name) => {
-                if name.t_type != Type::Word {
+                if let Type::Word(name) = name.value {
+                    name
+                } else {
                     return Err(name.into_err("Variable name should be a word!"));
                 }
-                name
             }
             None => {
                 let tok = self.gettok(-1).expect("This shouldn't fail");
@@ -260,21 +272,23 @@ impl Parser {
 
         let mut assigning = false;
         if let Some(token) = self.gettok(0) {
-            if token.t_type == Type::Equals {
+            if token.value == Type::Equals {
                 self.index += 1;
                 assigning = true;
             } else {
                 if !mutable {
-                    return Err(
-                        name.into_err("Immutable variables have to be assigned at declaration.")
-                    );
+                    panic!()
+                    // return Err(
+                    //     name.into_err("Immutable variables have to be assigned at declaration.")
+                    // );
                 }
             }
         } else {
             if !mutable {
-                return Err(
-                    name.into_err("Immutable variables have to be assigned at declaration.")
-                );
+                panic!()
+                // return Err(
+                //     name.into_err("Immutable variables have to be assigned at declaration.")
+                // );
             }
         }
 
@@ -287,12 +301,12 @@ impl Parser {
                     Some(val) => val,
                     None => return Err(val.into_err("Expected a value in variable assignment.")),
                 },
-                None => return Err(name.into_err("Expected a value!")),
+                None => panic!(), // return Err(name.into_err("Expected a value!")),
             }
         };
 
         Ok(VariableDef {
-            name: name.value,
+            name,
             mutable,
             value: Box::new(value),
         })
@@ -307,8 +321,14 @@ impl Parser {
             None => return Err(tok.into_err("Expected a value.")),
         };
 
+        let target = if let Type::Word(target) = &tok.value {
+            target.clone()
+        } else {
+            return Err(tok.into_err("Variable name should be a word."));
+        };
+
         Ok(Assign {
-            target: tok.value.clone(),
+            target,
             value: Box::new(match self.parse_node(&value)? {
                 Some(tok) => tok,
                 None => return Err(tok.into_err("Expected a value.")),
@@ -317,12 +337,11 @@ impl Parser {
     }
 
     fn build_name(&self, tok: &Token) -> Result<Name, CompilerError> {
-        if tok.t_type != Type::Word {
-            return Err(tok.into_err("Name should be a Word type!"));
+        if let Type::Word(id) = &tok.value {
+            Ok(Name { id: id.clone() })
+        } else {
+            Err(tok.into_err("Name should be a Word type!"))
         }
-        Ok(Name {
-            id: tok.value.clone(),
-        })
     }
 
     fn build_binop(&mut self) -> Result<BinOp, CompilerError> {
@@ -331,9 +350,9 @@ impl Parser {
 
         let mut need_closing = 0;
         while let Some(token) = self.gettok(0) {
-            match token.t_type {
-                Type::Op => {
-                    expr_unordered.push(ExprPart::Operator(match token.value.as_str() {
+            match &token.value {
+                Type::Op(op) => {
+                    expr_unordered.push(ExprPart::Operator(match op.as_str() {
                         "+" => Operator::Add,
                         "-" => Operator::Sub,
                         "*" => Operator::Mult,
@@ -349,7 +368,7 @@ impl Parser {
                     self.index += 1;
                     continue;
                 }
-                Type::Int | Type::String | Type::Float | Type::Word => (),
+                Type::Int(_) | Type::String(_) | Type::Float(_) | Type::Word(_) => (),
                 Type::Lparen => {
                     need_closing += 1;
                     expr_unordered.push(ExprPart::Lpar);
@@ -423,7 +442,7 @@ impl Parser {
             None => return Err(tok.into_err_offset(1, "Expected a scope body!")),
         };
 
-        while current.t_type != Type::Rbrack {
+        while current.value != Type::Rbrack {
             let tok = self.parse_node(&current)?;
 
             self.index += 1;
@@ -456,14 +475,19 @@ impl Parser {
 
         self.index += 1;
         let mut token = self.gettok(0).unwrap();
-        while token.t_type == Type::Nl {
+        while token.value == Type::Nl {
             self.index += 1;
             token = self.gettok(0).unwrap();
         }
-        if token.value == "else" {
-            self.index += 1;
-            let orelse = self.parse_node(&self.gettok(0).unwrap())?.unwrap();
-            if_statement.orelse = Box::new(orelse);
+
+        if let Type::Keyword(kw) = token.value {
+            if kw == "else" {
+                self.index += 1;
+                let orelse = self.parse_node(&self.gettok(0).unwrap())?.unwrap();
+                if_statement.orelse = Box::new(orelse);
+            } else {
+                self.index -= 1;
+            }
         } else {
             self.index -= 1;
         }
@@ -478,7 +502,7 @@ impl Parser {
 
         let mut body = vec![];
 
-        while current.t_type != Type::Rbrack {
+        while current.value != Type::Rbrack {
             let tok = self.parse_node(&current)?;
 
             self.index += 1;
@@ -515,8 +539,8 @@ impl Parser {
     }
 
     fn parse_node(&mut self, tok: &Token) -> Result<Option<Node>, CompilerError> {
-        match tok.t_type {
-            Type::Keyword => match tok.value.as_str() {
+        match &tok.value {
+            Type::Keyword(kw) => match kw.as_str() {
                 FUN => Ok(Some(Node::FunctionDef(self.build_fun()?))),
                 INT => Ok(Some(Node::Name(Name { id: INT.to_owned() }))),
                 FLOAT => Ok(Some(Node::Name(Name {
@@ -533,17 +557,23 @@ impl Parser {
                 }
                 _ => Err(tok.into_err("Not impl.")),
             },
-            Type::Int | Type::String | Type::Float
+            Type::Int(_) | Type::String(_) | Type::Float(_)
                 if self.gettok(1).is_none()
                     || self.building_binop[self.scope]
-                    || self.gettok(1).expect("This shouldn't fail...").t_type != Type::Op =>
+                    || !matches!(
+                        self.gettok(1).expect("This shouldn't fail...").value,
+                        Type::Op(_)
+                    ) =>
             {
                 Ok(Some(Node::Constant(self.build_constant(tok)?)))
             }
-            Type::Int | Type::String | Type::Float | Type::Word
+            Type::Int(_) | Type::String(_) | Type::Float(_) | Type::Word(_)
                 if self.gettok(1).is_some()
                     && !self.building_binop[self.scope]
-                    && self.gettok(1).expect("This shouldn't fail...").t_type == Type::Op =>
+                    && matches!(
+                        self.gettok(1).expect("This shouldn't fail...").value,
+                        Type::Op(_)
+                    ) =>
             {
                 Ok(Some(Node::BinOp(self.build_binop()?)))
             }
@@ -552,8 +582,8 @@ impl Parser {
                 Ok(Some(Node::BinOp(self.build_binop()?)))
             }
 
-            Type::Word => match self.gettok(1) {
-                Some(next_token) => match next_token.t_type {
+            Type::Word(_) => match self.gettok(1) {
+                Some(next_token) => match next_token.value {
                     Type::Lparen => {
                         let prev_index = self.index;
                         let call = self.build_fcall()?;
@@ -561,9 +591,12 @@ impl Parser {
                             Some(tok) => tok,
                             None => return Ok(Some(Node::Call(call))),
                         };
-                        if next.value == "+" && !self.building_binop[self.scope] {
-                            self.index = prev_index;
-                            return Ok(Some(Node::BinOp(self.build_binop()?)));
+
+                        if let Type::Op(op) = next.value {
+                            if op == "+" && !self.building_binop[self.scope] {
+                                self.index = prev_index;
+                                return Ok(Some(Node::BinOp(self.build_binop()?)));
+                            }
                         }
                         return Ok(Some(Node::Call(call)));
                     }
@@ -574,7 +607,7 @@ impl Parser {
             },
 
             Type::Nl => Ok(None),
-            _ => Err(tok.into_err(&*format!("Unknown token: {}", tok))),
+            _ => Err(tok.into_err(&*format!("Unknown token: {:?}", tok))),
         }
     }
 

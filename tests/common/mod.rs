@@ -33,7 +33,7 @@ pub fn run(bytes: Vec<u8>, expected_stdout: &str) -> Result<(), String> {
 
     if out.stdout != expected_stdout.as_bytes() {
         return Err(
-            "Runtime ran successfully, but returned a different output than expected.".to_owned(),
+            "Runtime ran successfully, but returned different output than expected.".to_owned(),
         );
     }
 
