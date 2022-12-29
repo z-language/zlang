@@ -24,6 +24,9 @@ You define a variable with the "var" keyword. By default, all variables are immu
 ```kotlin
 var i = 0
 var mut i = 3.5
+var i = 5_000_000
+//      ^^^^^^^^^
+// you can also format numbers to your liking
 
 var i
 //  ^ this returns an error
