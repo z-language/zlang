@@ -12,6 +12,9 @@ TODO:
 - [ ] Implement all operators
 - [ ] Compiler optimizations
 - [ ] CODE CLEANUP!
+- [ ] Floating point numbers
+- [ ] Type conversions
+- [ ] Negative numbers
 
 ## A QUICK INTRODUCTION
 
