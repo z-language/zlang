@@ -150,7 +150,7 @@ impl Compiler {
     }
 
     fn get_variable_index(&self, name: &str) -> u8 {
-        let name = String::from(format!("{}.{}", self.current_func.last().unwrap(), name));
+        let name = format!("{}.{}", self.current_func.last().unwrap(), name);
         let mut hasher = DefaultHasher::new();
         name.hash(&mut hasher);
         let hash = hasher.finish();

@@ -1,3 +1,6 @@
+use std::iter::Peekable;
+use std::slice::Iter;
+
 use super::ast::{
     Arg, Assign, BinOp, Call, Constant, FunctionDef, If, Loop, Module, Name, Node, Operator,
     Primitive, Return, Scope, VariableDef,
