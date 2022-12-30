@@ -5,8 +5,8 @@ use crate::lexer::token::Token;
 
 pub mod ast;
 mod core;
-#[cfg(test)]
-mod parser_tests;
+// #[cfg(test)]
+// mod parser_tests;
 mod rpn;
 
 pub struct Parser {

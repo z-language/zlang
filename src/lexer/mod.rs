@@ -4,8 +4,8 @@ use self::token::{SourcePos, Token, Type};
 use crate::{error::CompilerError, grammar::*};
 
 pub mod token;
-#[cfg(test)]
-mod tokenizer_tests;
+// #[cfg(test)]
+// mod tokenizer_tests;
 
 #[macro_export]
 macro_rules! pos {
@@ -23,7 +23,7 @@ macro_rules! pos {
     };
 }
 
-macro_rules! tok {
+macro_rules! tok_ok {
     ($self:ident, $x:expr) => {
         Ok(Token {
             pos: pos!($self),
@@ -31,10 +31,16 @@ macro_rules! tok {
         })
     };
     ($pos:expr, $x:expr) => {
-        Ok(Token {
+        Ok(token!($pos, $x))
+    };
+}
+
+macro_rules! token {
+    ($pos:expr, $x:expr) => {
+        Token {
             pos: $pos,
             value: $x,
-        })
+        }
     };
 }
 
@@ -51,13 +57,13 @@ impl<'guard> Iterator for Lexer<'guard> {
         self.column += 1;
         let ch = self.chars.next()?;
         let tok: Result<Token, CompilerError> = match ch {
-            OPEN_PAREN => tok!(self, Type::LParen),
-            CLOSED_PAREN => tok!(self, Type::RParen),
-            OPEN_CBR => tok!(self, Type::LBrace),
-            CLOSED_CBR => tok!(self, Type::Rbrace),
-            COMMA => tok!(self, Type::Comma),
+            OPEN_PAREN => tok_ok!(self, Type::LParen),
+            CLOSED_PAREN => tok_ok!(self, Type::RParen),
+            OPEN_CBR => tok_ok!(self, Type::LBrace),
+            CLOSED_CBR => tok_ok!(self, Type::Rbrace),
+            COMMA => tok_ok!(self, Type::Comma),
             NL => {
-                let ret = tok!(self, Type::Nl);
+                let ret = tok_ok!(self, Type::Nl);
                 self.line += 1;
                 self.column = 0;
 
@@ -77,14 +83,14 @@ impl<'guard> Iterator for Lexer<'guard> {
                 }
 
                 self.column += word.len() as u32 + 1;
-                tok!(pos!(column, self.line), Type::String(word))
+                tok_ok!(pos!(column, self.line), Type::String(word))
             }
-            COLON => tok!(self, Type::DoubleDot),
+            COLON => tok_ok!(self, Type::DoubleDot),
             // Matches on arrow
             MINUS if *self.chars.peek()? == GREATER_THAN => {
                 self.chars.next();
                 self.column += 1;
-                tok!(pos!(self.column - 1, self.line), Type::Arrow)
+                tok_ok!(pos!(self.column - 1, self.line), Type::Arrow)
             }
             FORWARD_SLASH if *self.chars.peek()? == FORWARD_SLASH => {
                 while *self.chars.peek()? != NL {
@@ -98,28 +104,28 @@ impl<'guard> Iterator for Lexer<'guard> {
             // matches ==
             EQUALS if *self.chars.peek()? == EQUALS => {
                 self.column += 1;
-                tok!(pos!(self.column - 1, self.line), Type::Op("==".to_owned()))
+                tok_ok!(pos!(self.column - 1, self.line), Type::Op("==".to_owned()))
             }
 
             // matches >=
             GREATER_THAN if *self.chars.peek()? == EQUALS => {
                 self.column += 1;
-                tok!(pos!(self.column - 1, self.line), Type::Op(">=".to_owned()))
+                tok_ok!(pos!(self.column - 1, self.line), Type::Op(">=".to_owned()))
             }
 
             // matches <=
             LESS_THAN if *self.chars.peek()? == EQUALS => {
                 self.column += 1;
-                tok!(pos!(self.column - 1, self.line), Type::Op("<=".to_owned()))
+                tok_ok!(pos!(self.column - 1, self.line), Type::Op("<=".to_owned()))
             }
 
             // TODO: better op parsing
-            GREATER_THAN => tok!(self, Type::Op(ch.to_string())),
-            LESS_THAN => tok!(self, Type::Op(ch.to_string())),
-            MOD => tok!(self, Type::Op(ch.to_string())),
-            EQUALS => tok!(self, Type::Equals),
+            GREATER_THAN => tok_ok!(self, Type::Op(ch.to_string())),
+            LESS_THAN => tok_ok!(self, Type::Op(ch.to_string())),
+            MOD => tok_ok!(self, Type::Op(ch.to_string())),
+            EQUALS => tok_ok!(self, Type::Equals),
 
-            PLUS | STAR | FORWARD_SLASH | MINUS => tok!(self, Type::Op(ch.to_string())),
+            PLUS | STAR | FORWARD_SLASH | MINUS => tok_ok!(self, Type::Op(ch.to_string())),
 
             case if case.is_numeric() => {
                 // TODO: preparse numbers
@@ -138,7 +144,7 @@ impl<'guard> Iterator for Lexer<'guard> {
                 }
                 self.column += content.len() as u32 - 1;
 
-                tok!(
+                tok_ok!(
                     pos!(column, self.line),
                     if floating {
                         Type::Float(content)
@@ -161,7 +167,7 @@ impl<'guard> Iterator for Lexer<'guard> {
                 }
                 self.column += word.len() as u32 - 1;
 
-                tok!(
+                tok_ok!(
                     pos!(column, self.line),
                     if is_keyword(&word) {
                         Type::Keyword(word)
@@ -179,14 +185,6 @@ impl<'guard> Iterator for Lexer<'guard> {
 }
 
 impl<'guard> Lexer<'guard> {
-    pub fn new() -> Self {
-        Lexer {
-            chars: todo!(),
-            line: todo!(),
-            column: todo!(),
-        }
-    }
-
     pub fn from(source: &'guard str) -> Self {
         Lexer {
             chars: source.chars().peekable(),
@@ -196,7 +194,7 @@ impl<'guard> Lexer<'guard> {
     }
 
     fn throw(&self, message: &str) -> CompilerError {
-        CompilerError::new(1, 1, 1, message)
+        CompilerError::new(self.line as usize, self.column as usize, 1, message)
     }
 
     #[deprecated]
@@ -210,4 +208,29 @@ fn is_keyword(word: &str) -> bool {
         FUN, VAR, MUT, RETURN, IF, ELSE, INT, FLOAT, TRUE, FALSE, LOOP, BREAK,
     ]
     .contains(&word)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{token::SourcePos, token::Token, token::Type, Lexer};
+
+    #[test]
+    fn test_symbols() {
+        let test_case = "(){},\n:";
+        let mut lexer = Lexer::from(test_case);
+
+        let expected: [Token; 7] = [
+            token!(pos!(1, 1), Type::LParen),
+            token!(pos!(2, 1), Type::RParen),
+            token!(pos!(3, 1), Type::LBrace),
+            token!(pos!(4, 1), Type::Rbrace),
+            token!(pos!(5, 1), Type::Comma),
+            token!(pos!(6, 1), Type::Nl),
+            token!(pos!(1, 2), Type::DoubleDot),
+        ];
+
+        for token in &expected {
+            assert_eq!(*token, lexer.next().unwrap().unwrap());
+        }
+    }
 }
