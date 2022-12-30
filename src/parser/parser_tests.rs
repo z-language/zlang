@@ -1,5 +1,5 @@
 use super::{ast::*, Parser};
-use crate::tokenizer::{token::Token, Tokenizer};
+use crate::lexer::{token::Token, Lexer};
 
 #[test]
 fn test_constant_expr() {
@@ -262,6 +262,6 @@ fn test_func_def() {
 }
 
 fn get_tokens(test_case: &str) -> Vec<Token> {
-    let mut tokenizer = Tokenizer::new();
+    let mut tokenizer = Lexer::new();
     tokenizer.tokenize(test_case).unwrap()
 }

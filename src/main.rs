@@ -4,11 +4,11 @@ use args::Args;
 use clap::Parser;
 use std::{fs, io::Write};
 use zlang::compiler::Compiler as zCompiler;
+use zlang::lexer::{token, Lexer as zLexer};
 use zlang::parser::Parser as zParser;
-use zlang::tokenizer::Tokenizer as zLexer;
 
 fn main() {
-    let mut tokenizer = zLexer::new();
+    // let mut tokenizer = zLexer::new();
     let mut parser = zParser::new();
     let mut compiler = zCompiler::new();
     let args = Args::parse();
@@ -20,6 +20,12 @@ fn main() {
             return;
         }
     };
+
+    let tokens = zLexer::from(&source);
+    for tok in tokens {
+        println!("{:?}", tok);
+    }
+    /*
 
     let tokens = match tokenizer.tokenize(&source) {
         Ok(toks) => toks,
@@ -46,4 +52,5 @@ fn main() {
     }
     let mut out = fs::File::create(args.out).unwrap();
     out.write_all(&bytes).unwrap();
+     */
 }

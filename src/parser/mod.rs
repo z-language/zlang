@@ -1,7 +1,7 @@
 use std::{iter::Peekable, slice::Iter};
 
 use self::ast::Node;
-use crate::tokenizer::token::Token;
+use crate::lexer::token::Token;
 
 pub mod ast;
 mod core;

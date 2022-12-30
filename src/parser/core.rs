@@ -8,8 +8,8 @@ use super::ast::{
 use super::Parser;
 use crate::error::{CompilerError, MakeErr};
 use crate::grammar::*;
+use crate::lexer::token::{Token, Type};
 use crate::parser::rpn::shutting_yard;
-use crate::tokenizer::token::{Token, Type};
 
 #[derive(Debug, PartialEq)]
 pub enum ExprPart {
@@ -61,7 +61,7 @@ impl Parser {
             None => panic!(),
         };
 
-        while !matches!(current.value, Type::Rparen) {
+        while !matches!(current.value, Type::RParen) {
             let name = if let Type::Word(name) = current.value {
                 name
             } else {
@@ -89,7 +89,7 @@ impl Parser {
                     )
                 }
             };
-            if matches!(current.value, Type::Rparen) {
+            if matches!(current.value, Type::RParen) {
                 return Err(current.into_err("Please specify a type!"));
             }
             let annotation = match self.parse_node(&current)? {
@@ -126,7 +126,7 @@ impl Parser {
                 self.index += 1;
                 let tok = self.gettok(0).unwrap();
                 match tok.value {
-                    Type::Lbrack => {
+                    Type::LBrace => {
                         return Err(current.into_err_offset(-1, "Expected a return type!"))
                     }
                     _ => (),
@@ -150,7 +150,7 @@ impl Parser {
             None => return Err(current.into_err_offset(1, "Expected a function body!")),
         };
 
-        while !matches!(current.value, Type::Rbrack) {
+        while !matches!(current.value, Type::Rbrace) {
             let tok = self.parse_node(&current)?;
 
             self.index += 1;
@@ -191,7 +191,7 @@ impl Parser {
                     self.index += 1;
                     continue;
                 }
-                Type::Rparen => break,
+                Type::RParen => break,
 
                 _ => args.push(match self.parse_node(&token)? {
                     Some(tok) => tok,
@@ -372,13 +372,13 @@ impl Parser {
                     continue;
                 }
                 Type::Int(_) | Type::String(_) | Type::Float(_) | Type::Word(_) => (),
-                Type::Lparen => {
+                Type::LParen => {
                     need_closing += 1;
                     expr_unordered.push(ExprPart::Lpar);
                     self.index += 1;
                     continue;
                 }
-                Type::Rparen => {
+                Type::RParen => {
                     if need_closing == 0 {
                         break;
                     }
@@ -445,7 +445,7 @@ impl Parser {
             None => return Err(tok.into_err_offset(1, "Expected a scope body!")),
         };
 
-        while current.value != Type::Rbrack {
+        while current.value != Type::Rbrace {
             let tok = self.parse_node(&current)?;
 
             self.index += 1;
@@ -505,7 +505,7 @@ impl Parser {
 
         let mut body = vec![];
 
-        while current.value != Type::Rbrack {
+        while current.value != Type::Rbrace {
             let tok = self.parse_node(&current)?;
 
             self.index += 1;
@@ -580,14 +580,14 @@ impl Parser {
             {
                 Ok(Some(Node::BinOp(self.build_binop()?)))
             }
-            Type::Lbrack => Ok(Some(Node::Scope(self.build_scope(tok)?))),
-            Type::Lparen if !self.building_binop[self.scope] => {
+            Type::LBrace => Ok(Some(Node::Scope(self.build_scope(tok)?))),
+            Type::LParen if !self.building_binop[self.scope] => {
                 Ok(Some(Node::BinOp(self.build_binop()?)))
             }
 
             Type::Word(_) => match self.gettok(1) {
                 Some(next_token) => match next_token.value {
-                    Type::Lparen => {
+                    Type::LParen => {
                         let prev_index = self.index;
                         let call = self.build_fcall()?;
                         let next = match self.gettok(1) {

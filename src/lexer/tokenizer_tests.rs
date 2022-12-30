@@ -1,11 +1,11 @@
 use crate::{
+    lexer::{Lexer, SourcePos, Token, Type},
     pos,
-    tokenizer::{SourcePos, Token, Tokenizer, Type},
 };
 
 #[test]
 fn test_strings_normal() {
-    let mut tokenizer = Tokenizer::new();
+    let mut tokenizer = Lexer::new();
 
     // Its important to note that here I'm escaping the rust's quotes, and not sending the escapes to the parser.
     let test_case = "\"test\"";
@@ -22,7 +22,7 @@ fn test_strings_normal() {
 
 #[test]
 fn test_string_escapes() {
-    let mut tokenizer = Tokenizer::new();
+    let mut tokenizer = Lexer::new();
 
     let test_case = "\"\\\"\\\"test\\\"\\\"\\\\\"";
     let expected = Token {
@@ -38,7 +38,7 @@ fn test_string_escapes() {
 
 #[test]
 fn test_keywords() {
-    let mut tokenizer = Tokenizer::new();
+    let mut tokenizer = Lexer::new();
 
     let test_case = "int float var mut fun";
     let expected = vec![
@@ -87,7 +87,7 @@ assignLater = 14";
 
 #[test]
 fn test_math_expr_1() {
-    let mut tokenizer = Tokenizer::new();
+    let mut tokenizer = Lexer::new();
     let test_case = "2.5 * 3.75";
     let expected = vec![
         Token {
@@ -111,14 +111,14 @@ fn test_math_expr_1() {
 
 #[test]
 fn test_math_expr_2() {
-    let mut tokenizer = Tokenizer::new();
+    let mut tokenizer = Lexer::new();
     let test_case = "(3 - 45) -";
 
     let tokens = tokenizer.tokenize(test_case).unwrap();
     let expected = vec![
         Token {
             pos: pos!(0, 1),
-            value: Type::Lparen,
+            value: Type::LParen,
         },
         Token {
             pos: pos!(1, 1),
@@ -134,7 +134,7 @@ fn test_math_expr_2() {
         },
         Token {
             pos: pos!(7, 1),
-            value: Type::Rparen,
+            value: Type::RParen,
         },
         Token {
             pos: pos!(9, 1),
@@ -148,7 +148,7 @@ fn test_math_expr_2() {
 #[test]
 #[should_panic]
 fn test_decimal_error() {
-    let mut tokenizer = Tokenizer::new();
+    let mut tokenizer = Lexer::new();
     let test_case = "5.34.7";
 
     tokenizer.tokenize(test_case).unwrap();

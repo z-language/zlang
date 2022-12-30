@@ -1,11 +1,11 @@
 mod common;
 
 use common::{read_file, run};
-use zlang::{compiler::Compiler, parser::Parser, tokenizer::Tokenizer};
+use zlang::{compiler::Compiler, lexer::Lexer, parser::Parser};
 
 #[test]
 fn cmp_run() {
-    let mut tokenizer = Tokenizer::new();
+    let mut tokenizer = Lexer::new();
     let mut parser = Parser::new();
     let mut compiler = Compiler::new();
     let source = read_file("examples/cmp.ž");
