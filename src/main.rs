@@ -8,7 +8,6 @@ use zlang::lexer::{token, Lexer as zLexer};
 use zlang::parser::Parser as zParser;
 
 fn main() {
-    // let mut tokenizer = zLexer::new();
     let mut parser = zParser::new();
     let mut compiler = zCompiler::new();
     let args = Args::parse();
@@ -20,23 +19,16 @@ fn main() {
             return;
         }
     };
+    let lexer = zLexer::from(&source);
 
-    let tokens = zLexer::from(&source);
-    for tok in tokens {
-        println!("{:?}", tok);
-    }
-    /*
-
-    let tokens = match tokenizer.tokenize(&source) {
-        Ok(toks) => toks,
-        Err(err) => return err.display(&source),
-    };
-
-    let module = match parser.parse(tokens) {
+    let module = match parser.parse(lexer) {
         Ok(module) => module,
         Err(err) => return err.display(&source),
     };
 
+    println!("{:?}", module);
+
+    /*
     if args.parse_only {
         println!("{:#?}", module);
         return;

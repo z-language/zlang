@@ -1,7 +1,7 @@
-use std::{iter::Peekable, slice::Iter};
+use std::iter::Peekable;
 
 use self::ast::Node;
-use crate::lexer::token::Token;
+use crate::lexer::Lexer;
 
 pub mod ast;
 mod core;
@@ -9,10 +9,6 @@ mod core;
 // mod parser_tests;
 mod rpn;
 
-pub struct Parser {
-    body: Vec<Node>,
-    tokens: Vec<Token>,
-    index: usize,
-    building_binop: Vec<bool>,
-    scope: usize,
+pub struct Parser<'guard> {
+    tokens: Peekable<Lexer<'guard>>,
 }

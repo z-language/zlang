@@ -29,12 +29,13 @@ impl CompilerError {
     }
 
     fn print_message(&self) {
-        let spaces = " ".repeat(self.pos + 5);
+        let spaces = " ".repeat(self.pos + 4);
         let arrows = "^".repeat(self.arrows);
         eprintln!("{}{} {}", spaces, arrows, self.message);
     }
 
     pub fn display(&self, source: &str) {
+        let mut displayed = false;
         let mut line_num = 0;
         if LINE_PADDING < self.line {
             line_num = self.line - LINE_PADDING;
@@ -45,14 +46,15 @@ impl CompilerError {
             .skip(line_num)
             .take(LINE_PADDING * 2)
             .for_each(|line| {
-                line_num += 1;
-                if line_num == self.line + 1 {
+                if line_num == self.line {
                     self.print_message();
+                    displayed = true;
                 }
+                line_num += 1;
                 println!("{}| {}", padding(line_num), line)
             });
 
-        if line_num == 1 {
+        if !displayed {
             self.print_message();
         }
 
@@ -65,8 +67,7 @@ fn padding(num: usize) -> String {
 }
 
 pub trait MakeErr {
-    fn into_err(&self, message: &str) -> CompilerError;
-    fn into_err_offset(&self, offset: i32, message: &str) -> CompilerError;
+    fn into_err(self, message: &str) -> CompilerError;
 }
 
 #[cfg(test)]

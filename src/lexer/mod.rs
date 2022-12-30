@@ -1,7 +1,11 @@
 use std::{iter::Peekable, str::Chars};
 
-use self::token::{SourcePos, Token, Type};
-use crate::{error::CompilerError, grammar::*};
+use self::token::{Keyword, SourcePos, Token, Type};
+use crate::{
+    error::CompilerError,
+    grammar::*,
+    parser::ast::{Operator, Primitive},
+};
 
 pub mod token;
 // #[cfg(test)]
@@ -83,7 +87,10 @@ impl<'guard> Iterator for Lexer<'guard> {
                 }
 
                 self.column += word.len() as u32 + 1;
-                tok_ok!(pos!(column, self.line), Type::String(word))
+                tok_ok!(
+                    pos!(column, self.line),
+                    Type::Primitive(Primitive::Str(word))
+                )
             }
             COLON => tok_ok!(self, Type::DoubleDot),
             // Matches on arrow
@@ -104,31 +111,42 @@ impl<'guard> Iterator for Lexer<'guard> {
             // matches ==
             EQUALS if *self.chars.peek()? == EQUALS => {
                 self.column += 1;
-                tok_ok!(pos!(self.column - 1, self.line), Type::Op("==".to_owned()))
+                tok_ok!(
+                    pos!(self.column - 1, self.line),
+                    Type::Op(Operator::DoubleEquals)
+                )
             }
 
             // matches >=
             GREATER_THAN if *self.chars.peek()? == EQUALS => {
                 self.column += 1;
-                tok_ok!(pos!(self.column - 1, self.line), Type::Op(">=".to_owned()))
+                tok_ok!(
+                    pos!(self.column - 1, self.line),
+                    Type::Op(Operator::GreaterEquals)
+                )
             }
 
             // matches <=
             LESS_THAN if *self.chars.peek()? == EQUALS => {
                 self.column += 1;
-                tok_ok!(pos!(self.column - 1, self.line), Type::Op("<=".to_owned()))
+                tok_ok!(
+                    pos!(self.column - 1, self.line),
+                    Type::Op(Operator::LessEquals)
+                )
             }
 
             // TODO: better op parsing
-            GREATER_THAN => tok_ok!(self, Type::Op(ch.to_string())),
-            LESS_THAN => tok_ok!(self, Type::Op(ch.to_string())),
-            MOD => tok_ok!(self, Type::Op(ch.to_string())),
+            GREATER_THAN => tok_ok!(self, Type::Op(Operator::Greater)),
+            LESS_THAN => tok_ok!(self, Type::Op(Operator::Less)),
+            MOD => tok_ok!(self, Type::Op(Operator::Mod)),
+            PLUS => tok_ok!(self, Type::Op(Operator::Add)),
+            STAR => tok_ok!(self, Type::Op(Operator::Mult)),
+            FORWARD_SLASH => tok_ok!(self, Type::Op(Operator::Div)),
+            MINUS => tok_ok!(self, Type::Op(Operator::Sub)),
             EQUALS => tok_ok!(self, Type::Equals),
 
-            PLUS | STAR | FORWARD_SLASH | MINUS => tok_ok!(self, Type::Op(ch.to_string())),
-
             case if case.is_numeric() => {
-                // TODO: preparse numbers
+                // TODO: preparse numbers and _
                 let mut content = String::from(case);
                 let mut floating = false;
                 let column = self.column;
@@ -147,9 +165,9 @@ impl<'guard> Iterator for Lexer<'guard> {
                 tok_ok!(
                     pos!(column, self.line),
                     if floating {
-                        Type::Float(content)
+                        Type::Primitive(Primitive::Float(content.parse().unwrap()))
                     } else {
-                        Type::Int(content)
+                        Type::Primitive(Primitive::Int(content.parse().unwrap()))
                     }
                 )
             }
@@ -170,7 +188,7 @@ impl<'guard> Iterator for Lexer<'guard> {
                 tok_ok!(
                     pos!(column, self.line),
                     if is_keyword(&word) {
-                        Type::Keyword(word)
+                        Type::Keyword(match_keyword(&word))
                     } else {
                         Type::Word(word)
                     }
@@ -196,11 +214,6 @@ impl<'guard> Lexer<'guard> {
     fn throw(&self, message: &str) -> CompilerError {
         CompilerError::new(self.line as usize, self.column as usize, 1, message)
     }
-
-    #[deprecated]
-    pub fn tokenize(&mut self, source: &str) -> Result<Vec<Token>, CompilerError> {
-        Ok(vec![])
-    }
 }
 
 fn is_keyword(word: &str) -> bool {
@@ -208,6 +221,24 @@ fn is_keyword(word: &str) -> bool {
         FUN, VAR, MUT, RETURN, IF, ELSE, INT, FLOAT, TRUE, FALSE, LOOP, BREAK,
     ]
     .contains(&word)
+}
+
+fn match_keyword(word: &str) -> Keyword {
+    match word {
+        TRUE => Keyword::True,
+        FALSE => Keyword::True,
+        _ => panic!(),
+    }
+}
+
+impl<'guard> Default for Lexer<'guard> {
+    fn default() -> Self {
+        Self {
+            chars: "".chars().peekable(),
+            line: 0,
+            column: 0,
+        }
+    }
 }
 
 #[cfg(test)]
