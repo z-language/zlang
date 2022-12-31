@@ -4,7 +4,6 @@ use common::read_file;
 use zlang::{compiler::Compiler, lexer::Lexer, parser::Parser};
 
 #[test]
-#[ignore = "yikes"]
 fn loop_run() {
     let source = read_file("examples/loop.ž");
     let lexer = Lexer::from(&source);

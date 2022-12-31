@@ -111,6 +111,7 @@ impl<'guard> Iterator for Lexer<'guard> {
 
             // matches ==
             EQUALS if *self.chars.peek()? == EQUALS => {
+                self.chars.next();
                 self.column += 1;
                 tok_ok!(
                     pos!(self.column - 1, self.line),
@@ -120,6 +121,7 @@ impl<'guard> Iterator for Lexer<'guard> {
 
             // matches >=
             GREATER_THAN if *self.chars.peek()? == EQUALS => {
+                self.chars.next();
                 self.column += 1;
                 tok_ok!(
                     pos!(self.column - 1, self.line),
@@ -129,6 +131,7 @@ impl<'guard> Iterator for Lexer<'guard> {
 
             // matches <=
             LESS_THAN if *self.chars.peek()? == EQUALS => {
+                self.chars.next();
                 self.column += 1;
                 tok_ok!(
                     pos!(self.column - 1, self.line),
@@ -219,10 +222,7 @@ impl<'guard> Lexer<'guard> {
 }
 
 fn is_keyword(word: &str) -> bool {
-    [
-        FUN, VAR, MUT, RETURN, IF, ELSE, INT, FLOAT, TRUE, FALSE, LOOP, BREAK,
-    ]
-    .contains(&word)
+    [FUN, VAR, MUT, RETURN, IF, ELSE, TRUE, FALSE, LOOP, BREAK].contains(&word)
 }
 
 fn match_keyword(word: &str) -> Keyword {
@@ -237,7 +237,10 @@ fn match_keyword(word: &str) -> Keyword {
         BREAK => Keyword::Break,
         LOOP => Keyword::Loop,
         RETURN => Keyword::Return,
-        _ => panic!(),
+        _ => {
+            println!("Keyword: '{}' isn't implemented yet.", word);
+            panic!()
+        }
     }
 }
 

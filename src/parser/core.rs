@@ -38,8 +38,7 @@ impl<'guard> Parser<'guard> {
     pub fn new() -> Self {
         Parser {
             tokens: Lexer::default().peekable(),
-            scope: 0,
-            building_binop: vec![],
+            prev: Type::default(),
         }
     }
 
@@ -47,10 +46,14 @@ impl<'guard> Parser<'guard> {
         let mut module = Module::new();
 
         self.tokens = lexer.peekable();
-        self.scope = 0;
-        self.building_binop.clear();
+        self.prev = Type::default();
+
         while let Some(current) = self.tokens.next() {
-            let parsed = self.parse_node(current?)?;
+            let current = current?;
+            if current.value == Type::Nl {
+                continue;
+            }
+            let parsed = self.parse_node(current)?;
             module.body.push(parsed);
         }
 
@@ -60,7 +63,8 @@ impl<'guard> Parser<'guard> {
 
 impl<'guard> Parser<'guard> {
     fn parse_node(&mut self, tok: Token) -> Result<Node, CompilerError> {
-        match tok.value {
+        let prev = tok.value.clone();
+        let ret = match tok.value {
             Type::Primitive(_) if matches!(peek!(self).value, Type::Op(_)) => {
                 Ok(Node::BinOp(self.build_binop(tok)?))
             }
@@ -87,6 +91,10 @@ impl<'guard> Parser<'guard> {
                     next!(self);
                     Ok(Node::Assign(self.build_assign(tok)?))
                 }
+                Type::Op(_) if !matches!(self.prev, Type::Op(_)) => {
+                    self.prev = Type::Op(Operator::Add);
+                    Ok(Node::BinOp(self.build_binop(tok)?))
+                }
                 _ => Ok(Node::Name(Name { id: word.clone() })),
             },
 
@@ -101,7 +109,11 @@ impl<'guard> Parser<'guard> {
                     .clone()
                     .into_err(&*format!("Unexpected token: {:?}", tok)))
             }
-        }
+        };
+
+        self.prev = prev;
+
+        ret
     }
 
     fn build_fun(&mut self) -> Result<FunctionDef, CompilerError> {
@@ -156,9 +168,9 @@ impl<'guard> Parser<'guard> {
             if !matches!(current.value, Type::Word(_)) {
                 return Err(current.into_err("Function return type should be a word."));
             }
+            next!(self);
             returns = self.parse_node(current)?;
         } else if current.value != Type::LBrace {
-            println!("{:?}", current);
             return Err(current.into_err("Expected a code block."));
         }
 
@@ -301,7 +313,14 @@ impl<'guard> Parser<'guard> {
 
         let run = self.build_scope()?;
 
-        current = peek!(self);
+        loop {
+            current = peek!(self);
+            if current.value != Type::Nl {
+                break;
+            }
+            next!(self);
+        }
+
         let mut orelse = Node::None;
         if let Type::Keyword(kw) = current.value {
             if kw == Keyword::Else {
@@ -404,8 +423,11 @@ impl<'guard> Parser<'guard> {
                     next!(self);
                     break;
                 }
-                Type::Comma | Type::RBrace => break,
-                _ => panic!(),
+                Type::Comma | Type::RBrace | Type::LBrace => break,
+                ref tok => {
+                    println!("{:?}", tok);
+                    return Err(current.into_err("Unexpected token in binop."));
+                }
             };
 
             expr_unordered.push(part);

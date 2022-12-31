@@ -21,6 +21,12 @@ pub enum Type {
     Primitive(Primitive),
 }
 
+impl Default for Type {
+    fn default() -> Self {
+        Type::Nl
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Keyword {
     True,

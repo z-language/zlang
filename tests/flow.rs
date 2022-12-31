@@ -4,7 +4,6 @@ use common::{read_file, run};
 use zlang::{compiler::Compiler, lexer::Lexer, parser::Parser};
 
 #[test]
-#[ignore = "yikes"]
 fn flow_run() {
     let source = read_file("examples/flow.ž");
     let lexer = Lexer::from(&source);

@@ -4,7 +4,6 @@ use common::{read_file, run};
 use zlang::{compiler::Compiler, lexer::Lexer, parser::Parser};
 
 #[test]
-#[ignore = "yikes"]
 fn binop_run() {
     let source = read_file("examples/binop.ž");
     let lexer = Lexer::from(&source);

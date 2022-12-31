@@ -212,7 +212,7 @@ impl Compiler {
         let test = self.parse_node(&if_statement.test)?;
         // later push inst after test
         self.pos += 6;
-        let mut body = self.parse_node(&Node::None)?;
+        let mut body = self.build_scope(&if_statement.run)?;
         self.pos += 3;
         let orelse = self.parse_node(&if_statement.orelse)?;
 

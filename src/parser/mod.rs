@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use crate::lexer::Lexer;
+use crate::lexer::{token::Type, Lexer};
 
 pub mod ast;
 mod core;
@@ -10,7 +10,5 @@ mod rpn;
 
 pub struct Parser<'guard> {
     tokens: Peekable<Lexer<'guard>>,
-
-    scope: usize,
-    building_binop: Vec<bool>,
+    prev: Type,
 }
