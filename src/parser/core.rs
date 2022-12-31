@@ -1,5 +1,6 @@
 use super::ast::{
-    Arg, BinOp, Call, Constant, FunctionDef, Module, Name, Node, Operator, Primitive,
+    Arg, Assign, BinOp, Call, Constant, FunctionDef, If, Loop, Module, Name, Node, Operator,
+    Primitive, Return, Scope, VariableDef,
 };
 use super::Parser;
 use crate::error::{CompilerError, MakeErr};
@@ -67,16 +68,29 @@ impl<'guard> Parser<'guard> {
             Type::Keyword(kw) => match kw {
                 Keyword::True => todo!(),
                 Keyword::False => todo!(),
+                Keyword::Mut => todo!(),
                 Keyword::Fun => Ok(Node::FunctionDef(self.build_fun()?)),
+                Keyword::Var => Ok(Node::VariableDef(self.build_var()?)),
+                Keyword::If => Ok(Node::If(self.build_if()?)),
+                Keyword::Else => todo!(),
+                Keyword::Break => Ok(Node::Break),
+                Keyword::Loop => Ok(Node::Loop(self.build_loop()?)),
+                Keyword::Return => Ok(Node::Return(self.build_return()?)),
             },
 
-            Type::Word(ref word) => match next!(self).value {
-                Type::LParen => Ok(Node::Call(self.build_fcall(tok)?)),
-                next => {
-                    println!("next: {:?}", next);
-                    Ok(Node::Name(Name { id: word.clone() }))
+            Type::Word(ref word) => match peek!(self).value {
+                Type::LParen => {
+                    next!(self);
+                    Ok(Node::Call(self.build_fcall(tok)?))
                 }
+                Type::Equals => {
+                    next!(self);
+                    Ok(Node::Assign(self.build_assign(tok)?))
+                }
+                _ => Ok(Node::Name(Name { id: word.clone() })),
             },
+
+            Type::LBrace => Ok(Node::Scope(self.build_scope()?)),
 
             Type::Nl => {
                 let token = next!(self);
@@ -208,6 +222,139 @@ impl<'guard> Parser<'guard> {
         Ok(Constant { value })
     }
 
+    fn build_var(&mut self) -> Result<VariableDef, CompilerError> {
+        let mut mutable = false;
+        let mut current = next!(self);
+
+        if let Type::Keyword(kw) = &current.value {
+            if *kw == Keyword::Mut {
+                mutable = true;
+                current = next!(self);
+            }
+        }
+
+        let name = if let Type::Word(name) = current.value {
+            name
+        } else {
+            return Err(current.into_err("Variable name should be a word!"));
+        };
+        current = next!(self);
+
+        let mut assigning = false;
+
+        if current.value == Type::Equals {
+            assigning = true;
+        } else {
+            if !mutable {
+                return Err(
+                    current.into_err("Immutable variables have to be assigned at declaration.")
+                );
+            }
+        }
+
+        let value = if !assigning {
+            Node::None
+        } else {
+            current = next!(self);
+            if current.value == Type::Nl {
+                return Err(current.into_err("Expected a value!"));
+            }
+
+            self.parse_node(current)?
+        };
+
+        Ok(VariableDef {
+            name,
+            mutable,
+            value: Box::new(value),
+        })
+    }
+
+    fn build_assign(&mut self, name: Token) -> Result<Assign, CompilerError> {
+        let current = next!(self);
+        if current.value == Type::Nl {
+            return Err(current.into_err("Expected a value."));
+        }
+
+        let target = if let Type::Word(target) = name.value {
+            target
+        } else {
+            return Err(name.into_err("Variable name should be a word."));
+        };
+
+        Ok(Assign {
+            target,
+            value: Box::new(self.parse_node(current)?),
+        })
+    }
+
+    fn build_if(&mut self) -> Result<If, CompilerError> {
+        let mut current = next!(self);
+
+        let test = self.parse_node(current)?;
+
+        current = next!(self);
+
+        if current.value != Type::LBrace {
+            return Err(current.into_err("Expected a code block."));
+        }
+
+        let run = self.build_scope()?;
+
+        current = peek!(self);
+        let mut orelse = Node::None;
+        if let Type::Keyword(kw) = current.value {
+            if kw == Keyword::Else {
+                next!(self);
+                current = next!(self);
+                orelse = self.parse_node(current)?;
+            }
+        }
+
+        Ok(If {
+            test: Box::new(test),
+            run,
+            orelse: Box::new(orelse),
+        })
+    }
+
+    fn build_scope(&mut self) -> Result<Scope, CompilerError> {
+        let mut current = next!(self);
+        let mut body = vec![];
+
+        if current.value == Type::LBrace {
+            current = next!(self);
+        }
+
+        while current.value != Type::RBrace {
+            if current.value != Type::Nl {
+                body.push(self.parse_node(current)?);
+            }
+            current = next!(self);
+        }
+
+        Ok(Scope { body })
+    }
+
+    fn build_loop(&mut self) -> Result<Loop, CompilerError> {
+        let body = self.build_scope()?;
+        Ok(Loop { body })
+    }
+
+    fn build_return(&mut self) -> Result<Return, CompilerError> {
+        let current = next!(self);
+
+        let mut value = Node::None;
+
+        if current.value != Type::Nl {
+            value = self.parse_node(current)?;
+        }
+
+        Ok(Return {
+            value: Box::new(value),
+        })
+    }
+
     fn build_binop(&mut self, start: Token) -> Result<BinOp, CompilerError> {
         let mut expr_unordered: Vec<ExprPart> = vec![];
         let mut need_closing = 0;
@@ -257,7 +404,7 @@ impl<'guard> Parser<'guard> {
                     next!(self);
                     break;
                 }
-                Type::Comma => break,
+                Type::Comma | Type::RBrace => break,
                 _ => panic!(),
             };
 
@@ -298,5 +445,67 @@ impl<'guard> Parser<'guard> {
                 _ => panic!(),
             },
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn wrap_in_main(case: &str) -> String {
+        format!("fun main() {{ {} }}", case)
+    }
+
+    macro_rules! fun_def {
+        ($name:tt, $args:expr, $body:expr, $returns:expr) => {
+            Node::FunctionDef(FunctionDef {
+                name: $name.to_owned(),
+                args: $args,
+                body: $body,
+                returns: Box::new($returns),
+            })
+        };
+        ($name:tt, $args:expr, $body:expr) => {
+            fun_def!($name, $args, $body, Node::None)
+        };
+    }
+
+    macro_rules! binop {
+        ($left:expr, $op:expr, $right:expr) => {
+            Node::BinOp(BinOp {
+                left: Box::new($left),
+                op: $op,
+                right: Box::new($right),
+            })
+        };
+    }
+
+    macro_rules! constant {
+        ($value:expr, i32) => {
+            Node::Constant(Constant {
+                value: Primitive::Int($value),
+            })
+        };
+    }
+
+    #[test]
+    fn test_binop() {
+        let test_case = "3 + 2 * 4";
+        let mut parser = Parser::new();
+
+        let ast = parser.parse(Lexer::from(&wrap_in_main(test_case))).unwrap();
+        let expected = Module {
+            body: vec![fun_def!(
+                "main",
+                vec![],
+                vec![binop!(
+                    constant!(3, i32),
+                    Operator::Add,
+                    binop!(constant!(2, i32), Operator::Mult, constant!(4, i32))
+                ),]
+            )],
+        };
+
+        assert_eq!(expected, ast);
     }
 }

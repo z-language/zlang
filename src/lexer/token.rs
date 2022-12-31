@@ -25,7 +25,14 @@ pub enum Type {
 pub enum Keyword {
     True,
     False,
+    If,
+    Else,
     Fun,
+    Mut,
+    Var,
+    Break,
+    Loop,
+    Return,
 }
 
 #[derive(Debug, PartialEq, Clone)]

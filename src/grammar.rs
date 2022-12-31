@@ -8,6 +8,7 @@ pub const SPACE: char = ' ';
 pub const DOT: char = '.';
 pub const COLON: char = ':';
 pub const FORWARD_SLASH: char = '/';
+pub const BACKSLASH: char = '\\';
 pub const MINUS: char = '-';
 pub const PLUS: char = '+';
 pub const MOD: char = '%';

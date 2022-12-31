@@ -69,14 +69,21 @@ impl<'guard> Iterator for Lexer<'guard> {
             }
             SPACE => return self.next(),
             DOUBLE_QUOTES => {
-                // TODO: make this better
                 let mut word = String::new();
                 let column = self.column;
 
                 let mut current = self.chars.next()?;
-                while current != '"' {
-                    word.push(current);
+                while current != DOUBLE_QUOTES {
+                    if current == BACKSLASH {
+                        current = match self.chars.next()? {
+                            'n' => '\n',
+                            DOUBLE_QUOTES => DOUBLE_QUOTES,
+                            BACKSLASH => BACKSLASH,
+                            _ => return Some(Err(self.throw("Unknown escape char."))),
+                        };
+                    }
 
+                    word.push(current);
                     current = self.chars.next()?;
                 }
 
@@ -223,6 +230,13 @@ fn match_keyword(word: &str) -> Keyword {
         TRUE => Keyword::True,
         FALSE => Keyword::True,
         FUN => Keyword::Fun,
+        VAR => Keyword::Var,
+        MUT => Keyword::Mut,
+        IF => Keyword::If,
+        ELSE => Keyword::Else,
+        BREAK => Keyword::Break,
+        LOOP => Keyword::Loop,
+        RETURN => Keyword::Return,
         _ => panic!(),
     }
 }

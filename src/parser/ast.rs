@@ -25,7 +25,7 @@ pub struct Return {
 #[derive(Debug, PartialEq, Clone)]
 pub struct If {
     pub test: Box<Node>,
-    pub run: Box<Node>,
+    pub run: Scope,
     pub orelse: Box<Node>,
 }
 
@@ -36,7 +36,7 @@ pub struct Scope {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Loop {
-    pub body: Vec<Node>,
+    pub body: Scope,
 }
 
 #[derive(Debug, PartialEq, Clone)]

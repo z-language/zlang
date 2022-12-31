@@ -3,6 +3,7 @@ mod args;
 use args::Args;
 use clap::Parser;
 use std::fs;
+use std::io::Write;
 use zlang::compiler::Compiler as zCompiler;
 use zlang::lexer::Lexer as zLexer;
 use zlang::parser::Parser as zParser;
@@ -26,9 +27,6 @@ fn main() {
         Err(err) => return err.display(&source),
     };
 
-    println!("{:#?}", module);
-
-    /*
     if args.parse_only {
         println!("{:#?}", module);
         return;
@@ -44,5 +42,4 @@ fn main() {
     }
     let mut out = fs::File::create(args.out).unwrap();
     out.write_all(&bytes).unwrap();
-     */
 }

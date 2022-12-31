@@ -212,7 +212,7 @@ impl Compiler {
         let test = self.parse_node(&if_statement.test)?;
         // later push inst after test
         self.pos += 6;
-        let mut body = self.parse_node(&if_statement.run)?;
+        let mut body = self.parse_node(&Node::None)?;
         self.pos += 3;
         let orelse = self.parse_node(&if_statement.orelse)?;
 
@@ -263,7 +263,7 @@ impl Compiler {
 
         self.loop_store.last_mut().unwrap().0 = self.pos;
 
-        for node in &loop_def.body {
+        for node in &loop_def.body.body {
             len += self.parse_node(node)?.len();
         }
 
@@ -272,7 +272,7 @@ impl Compiler {
         self.loop_store.last_mut().unwrap().1 = len;
 
         let mut buff = vec![];
-        for node in &loop_def.body {
+        for node in &loop_def.body.body {
             let bytes = self.parse_node(node)?;
             self.loop_store.last_mut().unwrap().0 += bytes.len();
             buff.extend(bytes);
