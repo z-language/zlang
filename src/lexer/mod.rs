@@ -14,16 +14,10 @@ pub mod token;
 #[macro_export]
 macro_rules! pos {
     ($x:expr, $y:expr) => {
-        SourcePos {
-            line: $y,
-            column: $x,
-        }
+        SourcePos::new($x, $y)
     };
     ($self:ident) => {
-        SourcePos {
-            line: $self.line,
-            column: $self.column,
-        }
+        SourcePos::new($self.column, $self.line)
     };
 }
 
@@ -64,7 +58,7 @@ impl<'guard> Iterator for Lexer<'guard> {
             OPEN_PAREN => tok_ok!(self, Type::LParen),
             CLOSED_PAREN => tok_ok!(self, Type::RParen),
             OPEN_CBR => tok_ok!(self, Type::LBrace),
-            CLOSED_CBR => tok_ok!(self, Type::Rbrace),
+            CLOSED_CBR => tok_ok!(self, Type::RBrace),
             COMMA => tok_ok!(self, Type::Comma),
             NL => {
                 let ret = tok_ok!(self, Type::Nl);
@@ -135,7 +129,6 @@ impl<'guard> Iterator for Lexer<'guard> {
                 )
             }
 
-            // TODO: better op parsing
             GREATER_THAN => tok_ok!(self, Type::Op(Operator::Greater)),
             LESS_THAN => tok_ok!(self, Type::Op(Operator::Less)),
             MOD => tok_ok!(self, Type::Op(Operator::Mod)),
@@ -146,7 +139,6 @@ impl<'guard> Iterator for Lexer<'guard> {
             EQUALS => tok_ok!(self, Type::Equals),
 
             case if case.is_numeric() => {
-                // TODO: preparse numbers and _
                 let mut content = String::from(case);
                 let mut floating = false;
                 let column = self.column;
@@ -154,6 +146,9 @@ impl<'guard> Iterator for Lexer<'guard> {
                 while let Some(current) = self.chars.peek() {
                     if *current == DOT {
                         floating = true;
+                    } else if *current == UNDERSCORE {
+                        self.chars.next();
+                        continue;
                     } else if !current.is_numeric() {
                         break;
                     }
@@ -227,6 +222,7 @@ fn match_keyword(word: &str) -> Keyword {
     match word {
         TRUE => Keyword::True,
         FALSE => Keyword::True,
+        FUN => Keyword::Fun,
         _ => panic!(),
     }
 }
@@ -243,6 +239,8 @@ impl<'guard> Default for Lexer<'guard> {
 
 #[cfg(test)]
 mod tests {
+    use crate::parser::ast::Primitive;
+
     use super::{token::SourcePos, token::Token, token::Type, Lexer};
 
     #[test]
@@ -254,14 +252,30 @@ mod tests {
             token!(pos!(1, 1), Type::LParen),
             token!(pos!(2, 1), Type::RParen),
             token!(pos!(3, 1), Type::LBrace),
-            token!(pos!(4, 1), Type::Rbrace),
+            token!(pos!(4, 1), Type::RBrace),
             token!(pos!(5, 1), Type::Comma),
             token!(pos!(6, 1), Type::Nl),
             token!(pos!(1, 2), Type::DoubleDot),
         ];
 
-        for token in &expected {
-            assert_eq!(*token, lexer.next().unwrap().unwrap());
+        for token in expected {
+            assert_eq!(token, lexer.next().unwrap().unwrap());
+        }
+    }
+
+    #[test]
+    fn test_numbers() {
+        let test_case = "23 2.5 1_349__2_";
+        let mut lexer = Lexer::from(test_case);
+
+        let expected = [
+            token!(pos!(1, 1), Type::Primitive(Primitive::Int(23))),
+            token!(pos!(4, 1), Type::Primitive(Primitive::Float(2.5))),
+            token!(pos!(8, 1), Type::Primitive(Primitive::Int(13492))),
+        ];
+
+        for token in expected {
+            assert_eq!(token, lexer.next().unwrap().unwrap());
         }
     }
 }

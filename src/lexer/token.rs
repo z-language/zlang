@@ -11,7 +11,7 @@ pub enum Type {
     RParen,
     Nl,
     LBrace,
-    Rbrace,
+    RBrace,
     Op(Operator),
     Arrow,
     DoubleDot,
@@ -25,12 +25,19 @@ pub enum Type {
 pub enum Keyword {
     True,
     False,
+    Fun,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct SourcePos {
-    pub line: u32,
-    pub column: u32,
+    line: u32,
+    column: u32,
+}
+
+impl SourcePos {
+    pub fn new(column: u32, line: u32) -> Self {
+        SourcePos { line, column }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]

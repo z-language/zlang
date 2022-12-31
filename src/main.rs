@@ -2,9 +2,9 @@ mod args;
 
 use args::Args;
 use clap::Parser;
-use std::{fs, io::Write};
+use std::fs;
 use zlang::compiler::Compiler as zCompiler;
-use zlang::lexer::{token, Lexer as zLexer};
+use zlang::lexer::Lexer as zLexer;
 use zlang::parser::Parser as zParser;
 
 fn main() {
@@ -26,7 +26,7 @@ fn main() {
         Err(err) => return err.display(&source),
     };
 
-    println!("{:?}", module);
+    println!("{:#?}", module);
 
     /*
     if args.parse_only {
