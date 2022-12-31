@@ -68,7 +68,7 @@ loop {
 ```
 
 ## If statements
-```rust
+```kotlin
 if cond {}
 else {}
 
@@ -80,8 +80,8 @@ if cond {
     // ...
 }
 
-if cond do()
-if cond do() else doElse()
+var i = if cond { "yes" } else { "no" }
+// Ternary operator example. 
 ```
 
 ## Strings
