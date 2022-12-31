@@ -237,10 +237,7 @@ fn match_keyword(word: &str) -> Keyword {
         BREAK => Keyword::Break,
         LOOP => Keyword::Loop,
         RETURN => Keyword::Return,
-        _ => {
-            println!("Keyword: '{}' isn't implemented yet.", word);
-            panic!()
-        }
+        _ => panic!("Keyword: '{}' isn't implemented yet.", word),
     }
 }
 

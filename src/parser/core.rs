@@ -451,10 +451,7 @@ impl<'guard> Parser<'guard> {
                 }
                 ExprPart::Operand(operand) => stack.push(operand),
 
-                other => {
-                    println!("Unexpected token: {:?}", other);
-                    panic!()
-                }
+                other => panic!("Unexpected token {:?}", other),
             }
         }
 

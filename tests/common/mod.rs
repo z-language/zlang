@@ -4,13 +4,7 @@ const RUNTIME_EXE: &str = "zvm";
 const TEST_BYTECODE_LOCATION: &str = "debug/test";
 
 pub fn read_file(file_name: &str) -> String {
-    match fs::read_to_string(file_name) {
-        Ok(source) => source,
-        Err(why) => {
-            println!("{}", why.to_string());
-            panic!()
-        }
-    }
+    fs::read_to_string(file_name).expect("Files should be in the examples folder.")
 }
 
 pub fn run(bytes: Vec<u8>, expected_stdout: &str) -> Result<(), String> {
