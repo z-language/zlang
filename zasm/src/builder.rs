@@ -5,11 +5,10 @@ use crate::{
     types::{Source, Store, StrPtr},
 };
 
-pub struct Reg(String);
-
 pub struct Builder {
     buffer: String,
     registers: Vec<Reg>,
+    offset: u32,
 }
 
 pub struct Module<'guard> {
@@ -23,18 +22,12 @@ impl<'guard> Module<'guard> {
         Self {
             globals: vec!["_start"],
             strings: vec![],
-            functions: vec![Function::new("main")],
+            functions: vec![],
         }
     }
 
     pub fn add_func(&mut self, func: Function) {
         self.functions.push(func);
-    }
-
-    pub fn get_main(&mut self) -> &mut Function {
-        self.functions
-            .first_mut()
-            .expect("Main function always exists.")
     }
 
     pub fn add_global(&mut self, global: &'guard str) {
@@ -81,6 +74,22 @@ impl<'guard> Module<'guard> {
 pub enum Operand {
     Reg(Reg),
     Int(i32),
+    Var(Variable),
+}
+
+pub struct Variable(u32);
+pub struct Reg(String);
+
+impl Clone for Variable {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl Reg {
+    pub fn new(name: &str) -> Self {
+        Self(name.to_owned())
+    }
 }
 
 impl Builder {
@@ -88,10 +97,17 @@ impl Builder {
         Self {
             buffer: String::new(),
             registers: vec![
-                Reg("rdx".to_owned()),
-                Reg("rax".to_owned()),
-                Reg("rdi".to_owned()),
+                // general
+                Reg::new("eax"),
+                Reg::new("ebx"),
+                Reg::new("ecx"),
+                Reg::new("edx"),
+                // index & pointers
+                Reg::new("esi"),
+                Reg::new("edi"),
+                Reg::new("ebp"),
             ],
+            offset: 0,
         }
     }
     pub fn build_mov<T, E>(&mut self, dest: T, src: E) -> T
@@ -110,7 +126,65 @@ impl Builder {
         dest
     }
 
-    pub fn build_add(&mut self, x: Operand, y: i32) -> Reg {
+    pub fn assign_var(&mut self, value: Operand, var: &Variable) {
+        let value = match value {
+            Operand::Reg(reg) => {
+                let out = reg.0.clone();
+                self.free_reg(reg);
+                out
+            }
+            Operand::Int(i) => i.to_string(),
+            Operand::Var(var) => {
+                let reg = self.get_var(&var);
+                let out = reg.0.clone();
+
+                self.free_reg(reg);
+                out
+            }
+        };
+        let out = format!("mov [rbp-{offset}], {value}", offset = var.0);
+        self.buffer.push_str(&self.format(&out));
+    }
+
+    pub fn make_var(&mut self, value: Operand) -> Variable {
+        self.offset += 4;
+        let size = if matches!(value, Operand::Int(_)) {
+            "dword "
+        } else {
+            ""
+        };
+
+        let value = match value {
+            Operand::Reg(reg) => {
+                let out = reg.0.clone();
+                self.free_reg(reg);
+                out
+            }
+            Operand::Int(i) => i.to_string(),
+            Operand::Var(var) => {
+                let reg = self.get_var(&var);
+                let out = reg.0.clone();
+
+                self.free_reg(reg);
+                out
+            }
+        };
+
+        let out = format!("mov {size}[rbp-{offset}], {value}", offset = self.offset);
+        self.buffer.push_str(&self.format(&out));
+        Variable(self.offset)
+    }
+
+    fn get_var(&mut self, var: &Variable) -> Reg {
+        let reg = self.registers.pop().unwrap();
+
+        let out = format!("mov {}, [rbp-{}]", reg.0, var.0);
+        self.buffer.push_str(&self.format(&out));
+
+        reg
+    }
+
+    pub fn build_add(&mut self, x: Operand, y: Operand) -> Reg {
         let reg = match x {
             Operand::Reg(reg) => reg,
             Operand::Int(i) => {
@@ -121,9 +195,26 @@ impl Builder {
 
                 reg
             }
+            Operand::Var(var) => self.get_var(&var),
         };
 
-        let out = format!("add {}, {}", reg.0, y);
+        let source = match y {
+            Operand::Reg(reg) => {
+                let out = reg.0.clone();
+                self.free_reg(reg);
+                out
+            }
+            Operand::Int(i) => i.to_string(),
+            Operand::Var(var) => {
+                let reg = self.get_var(&var);
+                let out = reg.0.clone();
+
+                self.free_reg(reg);
+                out
+            }
+        };
+
+        let out = format!("add {}, {}", reg.0, source);
 
         self.buffer.push_str(&self.format(&out));
 
@@ -146,6 +237,7 @@ impl Builder {
     pub fn write_to_fn(&mut self, f: &mut Function) {
         f.write(&self.buffer);
         self.buffer.clear();
+        self.offset = 0;
     }
 
     fn format(&self, value: &str) -> String {

@@ -65,7 +65,8 @@ impl<'guard> Parser<'guard> {
 
 impl<'guard> Parser<'guard> {
     fn parse_node(&mut self, tok: Token) -> ZResult<Node> {
-        self.prev.pos = tok.pos.clone();
+        let prev_value = self.prev.value.clone();
+        self.prev = tok.clone();
 
         let ret = match tok.value {
             Type::Primitive(_) if matches!(peek!(self).value, Type::Op(_)) => {
@@ -102,7 +103,7 @@ impl<'guard> Parser<'guard> {
                     next!(self);
                     Ok(Node::Assign(self.build_assign(tok)?))
                 }
-                Type::Op(_) if !matches!(self.prev.value, Type::Op(_)) => {
+                Type::Op(_) if !matches!(prev_value, Type::Op(_)) => {
                     self.prev.value = Type::Op(Operator::Add);
                     Ok(Node::BinOp(self.build_binop(tok, None)?))
                 }

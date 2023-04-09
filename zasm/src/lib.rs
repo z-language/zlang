@@ -22,16 +22,36 @@ mod tests {
         let mut module = Module::new();
         let mut builder = Builder::new();
 
+        let mut main = Function::new("main");
+
         let mut adder = Function::new("adder");
-        let result = builder.build_add(Operand::Int(2), 3);
-        free!(builder.build_add(Operand::Reg(result), 4), builder);
+        let result = builder.build_add(Operand::Int(2), Operand::Int(3));
+        free!(
+            builder.build_add(Operand::Reg(result), Operand::Int(4)),
+            builder
+        );
         builder.write_to_fn(&mut adder);
 
         builder.build_call(&adder);
+        builder.write_to_fn(&mut main);
 
-        builder.write_to_fn(module.get_main());
         module.add_func(adder);
+        module.add_func(main);
 
         module.write_to_file("out.asm").unwrap();
+    }
+
+    #[test]
+    fn test_vars() {
+        let mut module = Module::new();
+        let mut builder = Builder::new();
+
+        let mut main = Function::new("main");
+
+        let _i = builder.make_var(Operand::Int(3));
+
+        builder.write_to_fn(&mut main);
+
+        module.add_func(main);
     }
 }

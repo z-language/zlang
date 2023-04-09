@@ -3,9 +3,9 @@ mod args;
 use args::Args;
 use clap::Parser;
 use std::fs;
-use zlang::compiler::Compiler as zCompiler;
-use zlang::lexer::Lexer as zLexer;
-use zlang::parser::Parser as zParser;
+use z::compiler::Compiler as zCompiler;
+use z::lexer::Lexer as zLexer;
+use z::parser::Parser as zParser;
 
 fn main() {
     let mut parser = zParser::new();
