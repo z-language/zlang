@@ -1,5 +1,6 @@
-use super::{ast::Operator, core::ExprPart};
+use super::core::ExprPart;
 use crate::error::CompilerError;
+use zasm::types::Operator;
 
 pub fn shutting_yard(toks: Vec<ExprPart>) -> Result<Vec<ExprPart>, CompilerError> {
     let mut output = vec![];
@@ -70,9 +71,10 @@ fn precedence(op: &Operator) -> u32 {
 #[cfg(test)]
 mod tests {
     use crate::parser::{
-        ast::{Constant, Node, Operator, Primitive},
+        ast::{Constant, Node, Primitive},
         core::ExprPart,
     };
+    use zasm::types::Operator;
 
     use super::*;
 

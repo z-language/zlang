@@ -2,7 +2,7 @@ use std::{fs, io};
 
 use crate::{
     func::Function,
-    types::{Source, Store, StrPtr},
+    types::{Operator, Source, Store, StrPtr},
 };
 
 pub struct Builder {
@@ -105,7 +105,6 @@ impl Builder {
                 // index & pointers
                 Reg::new("esi"),
                 Reg::new("edi"),
-                Reg::new("ebp"),
             ],
             offset: 0,
         }
@@ -184,7 +183,7 @@ impl Builder {
         reg
     }
 
-    pub fn build_add(&mut self, x: Operand, y: Operand) -> Reg {
+    pub fn build_op(&mut self, x: Operand, y: Operand, operation: Operator) -> Reg {
         let reg = match x {
             Operand::Reg(reg) => reg,
             Operand::Int(i) => {
@@ -214,9 +213,43 @@ impl Builder {
             }
         };
 
-        let out = format!("add {}, {}", reg.0, source);
+        let mut compare = false;
+        let opcode = match operation {
+            Operator::Add => "add",
+            Operator::Sub => "sub",
+            Operator::Mult => "mul",
+            Operator::Div => "div",
+            Operator::DoubleEquals
+            | Operator::Greater
+            | Operator::GreaterEquals
+            | Operator::Less
+            | Operator::LessEquals => {
+                compare = true;
+                "cmp"
+            }
+            Operator::Mod => todo!(),
+        };
 
+        let out = format!("{opcode} {register}, {source}", register = reg.0);
         self.buffer.push_str(&self.format(&out));
+
+        if compare {
+            let opcode = match operation {
+                Operator::DoubleEquals => "sete",
+                Operator::Greater => "setg",
+                Operator::GreaterEquals => "setge",
+                Operator::Less => "setl",
+                Operator::LessEquals => "setle",
+                _ => panic!(),
+            };
+
+            let mut out = String::from(opcode);
+            out.push_str(" al");
+            self.buffer.push_str(&self.format(&out));
+
+            let out = format!("movzx {}, al", reg.0);
+            self.buffer.push_str(&self.format(&out));
+        }
 
         reg
     }

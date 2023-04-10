@@ -1,3 +1,5 @@
+use zasm::types;
+
 #[derive(Debug, PartialEq)]
 pub struct Module {
     pub body: Vec<Node>,
@@ -63,7 +65,7 @@ pub struct Constant {
 #[derive(Debug, PartialEq)]
 pub struct BinOp {
     pub left: Box<Node>,
-    pub op: Operator,
+    pub op: types::Operator,
     pub right: Box<Node>,
 }
 #[derive(Debug, PartialEq)]
@@ -115,18 +117,4 @@ impl Default for Primitive {
     fn default() -> Self {
         Primitive::None
     }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum Operator {
-    Add,
-    Sub,
-    Mult,
-    Div,
-    DoubleEquals,
-    Greater,
-    GreaterEquals,
-    Less,
-    LessEquals,
-    Mod,
 }

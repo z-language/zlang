@@ -6,7 +6,7 @@ use zasm::{
 };
 
 use crate::parser::{
-    ast::{Assign, BinOp, Module, Node, Operator, Primitive, VariableDef},
+    ast::{Assign, BinOp, Module, Node, Primitive, VariableDef},
     ZResult,
 };
 
@@ -81,10 +81,7 @@ impl<'guard> Compiler<'guard> {
         let left = make_operand!(*binop.left, self);
         let right = make_operand!(*binop.right, self);
 
-        match binop.op {
-            Operator::Add => self.builder.build_add(left, right),
-            _ => todo!("Operator not impl."),
-        }
+        self.builder.build_op(left, right, binop.op)
     }
 
     fn build_var(&mut self, var: VariableDef) {

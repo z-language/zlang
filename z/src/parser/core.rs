@@ -1,14 +1,15 @@
 use std::borrow::BorrowMut;
 
 use super::ast::{
-    Arg, Assign, BinOp, Call, Constant, FunctionDef, If, List, Loop, Module, Name, Node, Operator,
-    Primitive, Return, Scope, VariableDef,
+    Arg, Assign, BinOp, Call, Constant, FunctionDef, If, List, Loop, Module, Name, Node, Primitive,
+    Return, Scope, VariableDef,
 };
 use super::{Parser, ZResult};
 use crate::error::MakeErr;
 use crate::lexer::token::{Keyword, Token, Type};
 use crate::lexer::Lexer;
 use crate::parser::rpn::shutting_yard;
+use zasm::types::Operator;
 
 macro_rules! next {
     ($self:ident) => {

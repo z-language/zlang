@@ -32,6 +32,20 @@ impl StrPtr {
     }
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum Operator {
+    Add,
+    Sub,
+    Mult,
+    Div,
+    DoubleEquals,
+    Greater,
+    GreaterEquals,
+    Less,
+    LessEquals,
+    Mod,
+}
+
 pub trait Store {}
 pub trait Source {}
 

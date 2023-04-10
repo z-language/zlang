@@ -25,9 +25,9 @@ mod tests {
         let mut main = Function::new("main");
 
         let mut adder = Function::new("adder");
-        let result = builder.build_add(Operand::Int(2), Operand::Int(3));
+        let result = builder.build_op(Operand::Int(2), Operand::Int(3), Operator::Add);
         free!(
-            builder.build_add(Operand::Reg(result), Operand::Int(4)),
+            builder.build_op(Operand::Reg(result), Operand::Int(4), Operator::Add),
             builder
         );
         builder.write_to_fn(&mut adder);

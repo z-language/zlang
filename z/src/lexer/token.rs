@@ -1,7 +1,8 @@
 use crate::{
     error::{CompilerError, MakeErr},
-    parser::ast::{Operator, Primitive},
+    parser::ast::Primitive,
 };
+use zasm::types::Operator;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Type {

@@ -4,11 +4,9 @@ use self::token::{Keyword, SourcePos, Token, Type};
 use crate::{
     error::CompilerError,
     grammar::*,
-    parser::{
-        ast::{Operator, Primitive},
-        ZResult,
-    },
+    parser::{ast::Primitive, ZResult},
 };
+use zasm::types::Operator;
 
 pub mod token;
 // #[cfg(test)]
