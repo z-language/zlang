@@ -3,10 +3,11 @@ use std::collections::HashMap;
 use zasm::{
     builder::{self, Operand, Reg, Variable},
     func,
+    types::Operator,
 };
 
 use crate::parser::{
-    ast::{Assign, BinOp, Module, Node, Primitive, VariableDef},
+    ast::{Assign, BinOp, Call, Module, Node, Primitive, VariableDef},
     ZResult,
 };
 
@@ -14,23 +15,6 @@ pub struct Compiler<'guard> {
     module: builder::Module<'guard>,
     builder: builder::Builder,
     vars: HashMap<String, Variable>,
-}
-
-macro_rules! make_operand {
-    ($x:expr, $self:ident) => {
-        match $x {
-            Node::Constant(c) => match c.value {
-                Primitive::Int(i) => Operand::Int(i),
-                _ => todo!("Support."),
-            },
-            Node::BinOp(binop) => Operand::Reg($self.build_binop(binop)),
-            Node::Name(name) => {
-                let var = $self.vars.get(&name.id).unwrap().clone();
-                Operand::Var(var)
-            }
-            oops => panic!("This can't be a binop operand: {:?}", oops),
-        }
-    };
 }
 
 impl<'guard> Compiler<'guard> {
@@ -65,27 +49,43 @@ impl<'guard> Compiler<'guard> {
             }
             Node::VariableDef(var) => self.build_var(var),
             Node::Assign(ass) => self.build_assign(ass),
+            Node::Call(call) => self.build_call(call),
             _ => panic!("Unknown node {:?}", node),
         }
 
         Ok(())
     }
 
+    fn build_call(&mut self, call: Call) {
+        let n_args = call.args.len();
+        for arg in call.args {
+            let value = self.make_operand(arg);
+            self.builder.build_push(value);
+        }
+        self.builder.call_by_name(&call.func.id);
+
+        // Temporarely create the rsp register that gets deleted
+        // after this function exits.
+        let reg = Operand::Reg(Reg::new("rsp"));
+        self.builder
+            .build_op(reg, Operand::Int((n_args * 8) as i32), Operator::Add);
+    }
+
     fn build_assign(&mut self, assign: Assign) {
-        let value = make_operand!(*assign.value, self);
+        let value = self.make_operand(*assign.value);
         self.builder
             .assign_var(value, self.vars.get(&assign.target).unwrap());
     }
 
     fn build_binop(&mut self, binop: BinOp) -> Reg {
-        let left = make_operand!(*binop.left, self);
-        let right = make_operand!(*binop.right, self);
+        let left = self.make_operand(*binop.left);
+        let right = self.make_operand(*binop.right);
 
         self.builder.build_op(left, right, binop.op)
     }
 
     fn build_var(&mut self, var: VariableDef) {
-        let value = make_operand!(*var.value, self);
+        let value = self.make_operand(*var.value);
         let i = self.builder.make_var(value);
         self.vars.insert(var.name, i);
     }
@@ -97,6 +97,25 @@ impl<'guard> Compiler<'guard> {
             module: builder::Module::new(),
             builder: builder::Builder::new(),
             vars: HashMap::default(),
+        }
+    }
+
+    pub fn make_operand(&mut self, node: Node) -> Operand {
+        match node {
+            Node::Constant(c) => match c.value {
+                Primitive::Int(i) => Operand::Int(i),
+                Primitive::Str(str) => {
+                    let ptr = self.module.add_string(&str);
+                    Operand::StrPtr(ptr)
+                }
+                _ => todo!("Support."),
+            },
+            Node::BinOp(binop) => Operand::Reg(self.build_binop(binop)),
+            Node::Name(name) => {
+                let var = self.vars.get(&name.id).unwrap().clone();
+                Operand::Var(var)
+            }
+            oops => panic!("This can't be an operand: {:?}", oops),
         }
     }
 }

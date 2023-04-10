@@ -1,6 +1,7 @@
 use std::{fs, io};
 
 use crate::{
+    constants::PUTS_SOURCE,
     func::Function,
     types::{Operator, Source, Store, StrPtr},
 };
@@ -13,7 +14,7 @@ pub struct Builder {
 
 pub struct Module<'guard> {
     globals: Vec<&'guard str>,
-    strings: Vec<&'guard str>,
+    strings: Vec<String>,
     functions: Vec<Function>,
 }
 
@@ -34,8 +35,8 @@ impl<'guard> Module<'guard> {
         self.globals.push(global);
     }
 
-    pub fn add_string(&mut self, string: &'guard str) -> StrPtr {
-        self.strings.push(string);
+    pub fn add_string(&mut self, string: &str) -> StrPtr {
+        self.strings.push(string.to_owned());
         StrPtr::new(self.strings.len() - 1)
     }
 
@@ -57,10 +58,16 @@ impl<'guard> Module<'guard> {
             out.push_str(&func.to_string());
         }
 
+        out.push_str(PUTS_SOURCE);
+
         // section .data
         out.push_str("section .data\n");
         for (i, string) in self.strings.iter().enumerate() {
-            let strn = format!("str_{}: db \"{}\",0xA\n", i, string);
+            let strn = format!(
+                "str_{}: db \"{}\",0\n",
+                i,
+                string.replace('\n', "\", 0xA, \"")
+            );
             out.push_str(&strn);
         }
 
@@ -71,13 +78,17 @@ impl<'guard> Module<'guard> {
     }
 }
 
+#[derive(Debug)]
 pub enum Operand {
     Reg(Reg),
     Int(i32),
+    StrPtr(StrPtr),
     Var(Variable),
 }
 
+#[derive(Debug)]
 pub struct Variable(u32);
+#[derive(Debug)]
 pub struct Reg(String);
 
 impl Clone for Variable {
@@ -90,6 +101,21 @@ impl Reg {
     pub fn new(name: &str) -> Self {
         Self(name.to_owned())
     }
+    pub fn to_x64(&self) -> String {
+        let mut out = String::new();
+        if self.0.starts_with('a') {
+            if let Some(first_char) = self.0.chars().next() {
+                // Create a new string with the first character replaced
+                out.push('a');
+                out.push_str(&self.0[first_char.len_utf8()..]);
+            }
+        } else {
+            out = self.0.clone();
+            out.pop();
+        }
+
+        out
+    }
 }
 
 impl Builder {
@@ -97,14 +123,20 @@ impl Builder {
         Self {
             buffer: String::new(),
             registers: vec![
-                // general
                 Reg::new("eax"),
-                Reg::new("ebx"),
                 Reg::new("ecx"),
                 Reg::new("edx"),
-                // index & pointers
+                Reg::new("ebx"),
                 Reg::new("esi"),
                 Reg::new("edi"),
+                Reg::new("r8d"),
+                Reg::new("r9d"),
+                Reg::new("r10d"),
+                Reg::new("r11d"),
+                Reg::new("r12d"),
+                Reg::new("r13d"),
+                Reg::new("r14d"),
+                Reg::new("r15d"),
             ],
             offset: 0,
         }
@@ -125,8 +157,8 @@ impl Builder {
         dest
     }
 
-    pub fn assign_var(&mut self, value: Operand, var: &Variable) {
-        let value = match value {
+    fn get_value(&mut self, value: Operand) -> String {
+        match value {
             Operand::Reg(reg) => {
                 let out = reg.0.clone();
                 self.free_reg(reg);
@@ -140,34 +172,42 @@ impl Builder {
                 self.free_reg(reg);
                 out
             }
+            Operand::StrPtr(str) => str.to_string(),
+        }
+    }
+
+    pub fn build_push(&mut self, value: Operand) {
+        let value = match value {
+            Operand::Reg(reg) => reg.to_x64(),
+            Operand::Var(var) => {
+                let reg = self.get_var(&var);
+                let out = reg.to_x64();
+
+                self.free_reg(reg);
+                out
+            }
+            any => self.get_value(any),
         };
+        let mut out = String::from("push ");
+        out.push_str(&value);
+        self.buffer.push_str(&self.format(&out));
+    }
+
+    pub fn assign_var(&mut self, value: Operand, var: &Variable) {
+        let value = self.get_value(value);
         let out = format!("mov [rbp-{offset}], {value}", offset = var.0);
         self.buffer.push_str(&self.format(&out));
     }
 
     pub fn make_var(&mut self, value: Operand) -> Variable {
         self.offset += 4;
-        let size = if matches!(value, Operand::Int(_)) {
-            "dword "
-        } else {
-            ""
+        let size = match value {
+            Operand::Int(_) => "dword ",
+            Operand::StrPtr(_) => "dword ",
+            _ => "",
         };
 
-        let value = match value {
-            Operand::Reg(reg) => {
-                let out = reg.0.clone();
-                self.free_reg(reg);
-                out
-            }
-            Operand::Int(i) => i.to_string(),
-            Operand::Var(var) => {
-                let reg = self.get_var(&var);
-                let out = reg.0.clone();
-
-                self.free_reg(reg);
-                out
-            }
-        };
+        let value = self.get_value(value);
 
         let out = format!("mov {size}[rbp-{offset}], {value}", offset = self.offset);
         self.buffer.push_str(&self.format(&out));
@@ -195,23 +235,17 @@ impl Builder {
                 reg
             }
             Operand::Var(var) => self.get_var(&var),
-        };
+            Operand::StrPtr(str) => {
+                let reg = self.registers.pop().unwrap();
 
-        let source = match y {
-            Operand::Reg(reg) => {
-                let out = reg.0.clone();
-                self.free_reg(reg);
-                out
-            }
-            Operand::Int(i) => i.to_string(),
-            Operand::Var(var) => {
-                let reg = self.get_var(&var);
-                let out = reg.0.clone();
+                let out = format!("mov {}, {}", reg.0, str.to_string());
+                self.buffer.push_str(&self.format(&out));
 
-                self.free_reg(reg);
-                out
+                reg
             }
         };
+
+        let source = self.get_value(y);
 
         let mut compare = false;
         let opcode = match operation {
@@ -264,6 +298,13 @@ impl Builder {
 
     pub fn build_call(&mut self, f: &Function) {
         let out = format!("call {}", f.name());
+        self.buffer.push_str(&self.format(&out));
+    }
+
+    /// This function doesn't check is the called func
+    /// exists, so make sure it does.
+    pub fn call_by_name(&mut self, name: &str) {
+        let out = format!("call {name}");
         self.buffer.push_str(&self.format(&out));
     }
 
