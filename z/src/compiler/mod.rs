@@ -1,26 +1,30 @@
 use std::collections::HashMap;
 
 use zasm::{
-    builder::{self, Operand, Reg, Variable},
+    builder::{Operand, Reg, Variable},
     func,
     types::Operator,
+    Builder, Module,
 };
 
-use crate::parser::{
-    ast::{Assign, BinOp, Call, Module, Node, Primitive, VariableDef},
-    ZResult,
+use crate::{
+    error::CompilerError,
+    parser::{
+        ast::{Assign, BinOp, Call, Module as Mod, Node, Primitive, VariableDef},
+        ZResult,
+    },
 };
 
 pub struct Compiler<'guard> {
-    module: builder::Module<'guard>,
-    builder: builder::Builder,
-    vars: HashMap<String, Variable>,
+    module: Module<'guard>,
+    builder: Builder,
+    vars: HashMap<String, (Variable, bool)>,
 }
 
 impl<'guard> Compiler<'guard> {
-    pub fn compile(&mut self, source: Module) -> ZResult<()> {
-        self.module = builder::Module::new();
-        self.builder = builder::Builder::new();
+    pub fn compile(&mut self, source: Mod) -> ZResult<()> {
+        self.module = Module::new();
+        self.builder = Builder::new();
 
         for node in source.body {
             self.handle_node(node)?;
@@ -48,7 +52,7 @@ impl<'guard> Compiler<'guard> {
                 self.builder.free_reg(tmp);
             }
             Node::VariableDef(var) => self.build_var(var),
-            Node::Assign(ass) => self.build_assign(ass),
+            Node::Assign(ass) => self.build_assign(ass)?,
             Node::Call(call) => self.build_call(call),
             _ => panic!("Unknown node {:?}", node),
         }
@@ -56,8 +60,9 @@ impl<'guard> Compiler<'guard> {
         Ok(())
     }
 
-    fn build_call(&mut self, call: Call) {
+    fn build_call(&mut self, mut call: Call) {
         let n_args = call.args.len();
+        call.args.reverse();
         for arg in call.args {
             let value = self.make_operand(arg);
             self.builder.build_push(value);
@@ -71,10 +76,17 @@ impl<'guard> Compiler<'guard> {
             .build_op(reg, Operand::Int((n_args * 8) as i32), Operator::Add);
     }
 
-    fn build_assign(&mut self, assign: Assign) {
+    fn build_assign(&mut self, assign: Assign) -> ZResult<()> {
         let value = self.make_operand(*assign.value);
-        self.builder
-            .assign_var(value, self.vars.get(&assign.target).unwrap());
+
+        let var = self.vars.get(&assign.target).unwrap();
+        // checks if var is mutable
+        if !var.1 {
+            return Err(CompilerError::new(1, 2, 1, "Fuck"));
+        }
+
+        self.builder.assign_var(value, &var.0);
+        Ok(())
     }
 
     fn build_binop(&mut self, binop: BinOp) -> Reg {
@@ -87,15 +99,15 @@ impl<'guard> Compiler<'guard> {
     fn build_var(&mut self, var: VariableDef) {
         let value = self.make_operand(*var.value);
         let i = self.builder.make_var(value);
-        self.vars.insert(var.name, i);
+        self.vars.insert(var.name, (i, var.mutable));
     }
 }
 
 impl<'guard> Compiler<'guard> {
     pub fn new() -> Self {
         Compiler {
-            module: builder::Module::new(),
-            builder: builder::Builder::new(),
+            module: Module::new(),
+            builder: Builder::new(),
             vars: HashMap::default(),
         }
     }
@@ -112,7 +124,7 @@ impl<'guard> Compiler<'guard> {
             },
             Node::BinOp(binop) => Operand::Reg(self.build_binop(binop)),
             Node::Name(name) => {
-                let var = self.vars.get(&name.id).unwrap().clone();
+                let var = self.vars.get(&name.id).unwrap().0.clone();
                 Operand::Var(var)
             }
             oops => panic!("This can't be an operand: {:?}", oops),

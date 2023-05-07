@@ -7,9 +7,9 @@ puts:
     mov rbp, rsp
     mov rax, 1
     mov rdi, 1
-    mov rsi, [rsp+24]
-    mov rdx, [rsp+16]
+    mov rsi, [rsp+16]
+    mov rdx, [rsp+24]
     syscall
-    pop rbp
+    leave
     ret
 ";

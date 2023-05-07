@@ -31,5 +31,8 @@ fn main() {
         return;
     }
 
-    compiler.compile(module).unwrap();
+    match compiler.compile(module) {
+        Ok(_) => (),
+        Err(err) => return err.display(&source),
+    }
 }

@@ -1,21 +1,26 @@
+use builder::Reg;
+use func::Function;
+
 pub mod builder;
 pub mod constants;
 pub mod func;
 pub mod types;
 
-macro_rules! free {
-    ($x:ident, $builder:ident) => {
-        $builder.free_reg($x)
-    };
-    ($x:expr, $builder:ident) => {
-        let tmp = $x;
-        $builder.free_reg(tmp)
-    };
+pub struct Builder {
+    buffer: String,
+    registers: Vec<Reg>,
+    offset: u32,
+    reserved: u32,
 }
 
+pub struct Module<'guard> {
+    globals: Vec<&'guard str>,
+    strings: Vec<String>,
+    functions: Vec<Function>,
+}
 #[cfg(test)]
 mod tests {
-    use crate::{builder::*, constants::STDOUT_FILENO, func::Function, types::*};
+    use crate::{builder::*, func::Function, types::*, *};
 
     #[test]
     fn test_basic() {
@@ -26,13 +31,12 @@ mod tests {
 
         let mut adder = Function::new("adder");
         let result = builder.build_op(Operand::Int(2), Operand::Int(3), Operator::Add);
-        free!(
-            builder.build_op(Operand::Reg(result), Operand::Int(4), Operator::Add),
-            builder
-        );
+        let result = builder.build_op(Operand::Reg(result), Operand::Int(4), Operator::Add);
+        builder.free_reg(result);
+
         builder.write_to_fn(&mut adder);
 
-        builder.build_call(&adder);
+        // builder.build_call(&adder);
         builder.write_to_fn(&mut main);
 
         module.add_func(adder);

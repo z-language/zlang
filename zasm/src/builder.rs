@@ -4,19 +4,8 @@ use crate::{
     constants::PUTS_SOURCE,
     func::Function,
     types::{Operator, Source, Store, StrPtr},
+    Builder, Module,
 };
-
-pub struct Builder {
-    buffer: String,
-    registers: Vec<Reg>,
-    offset: u32,
-}
-
-pub struct Module<'guard> {
-    globals: Vec<&'guard str>,
-    strings: Vec<String>,
-    functions: Vec<Function>,
-}
 
 impl<'guard> Module<'guard> {
     pub fn new() -> Self {
@@ -103,10 +92,10 @@ impl Reg {
     }
     pub fn to_x64(&self) -> String {
         let mut out = String::new();
-        if self.0.starts_with('a') {
+        if self.0.starts_with('e') {
             if let Some(first_char) = self.0.chars().next() {
                 // Create a new string with the first character replaced
-                out.push('a');
+                out.push('r');
                 out.push_str(&self.0[first_char.len_utf8()..]);
             }
         } else {
@@ -123,22 +112,23 @@ impl Builder {
         Self {
             buffer: String::new(),
             registers: vec![
-                Reg::new("eax"),
-                Reg::new("ecx"),
-                Reg::new("edx"),
-                Reg::new("ebx"),
-                Reg::new("esi"),
-                Reg::new("edi"),
-                Reg::new("r8d"),
-                Reg::new("r9d"),
-                Reg::new("r10d"),
-                Reg::new("r11d"),
-                Reg::new("r12d"),
-                Reg::new("r13d"),
-                Reg::new("r14d"),
                 Reg::new("r15d"),
+                Reg::new("r14d"),
+                Reg::new("r13d"),
+                Reg::new("r12d"),
+                Reg::new("r11d"),
+                Reg::new("r10d"),
+                Reg::new("r9d"),
+                Reg::new("r8d"),
+                Reg::new("edi"),
+                Reg::new("esi"),
+                Reg::new("ebx"),
+                Reg::new("edx"),
+                Reg::new("ecx"),
+                Reg::new("eax"),
             ],
             offset: 0,
+            reserved: 0,
         }
     }
     pub fn build_mov<T, E>(&mut self, dest: T, src: E) -> T
@@ -195,12 +185,13 @@ impl Builder {
 
     pub fn assign_var(&mut self, value: Operand, var: &Variable) {
         let value = self.get_value(value);
-        let out = format!("mov [rbp-{offset}], {value}", offset = var.0);
+        let out = format!("mov dword [rbp-{offset}], {value}", offset = var.0);
         self.buffer.push_str(&self.format(&out));
     }
 
     pub fn make_var(&mut self, value: Operand) -> Variable {
         self.offset += 4;
+        self.reserved += 1;
         let size = match value {
             Operand::Int(_) => "dword ",
             Operand::StrPtr(_) => "dword ",
@@ -296,11 +287,6 @@ impl Builder {
         self.buffer.push_str(&self.format("syscall"));
     }
 
-    pub fn build_call(&mut self, f: &Function) {
-        let out = format!("call {}", f.name());
-        self.buffer.push_str(&self.format(&out));
-    }
-
     /// This function doesn't check is the called func
     /// exists, so make sure it does.
     pub fn call_by_name(&mut self, name: &str) {
@@ -310,6 +296,7 @@ impl Builder {
 
     pub fn write_to_fn(&mut self, f: &mut Function) {
         f.write(&self.buffer);
+        f.set_reserved(self.reserved * 4);
         self.buffer.clear();
         self.offset = 0;
     }
