@@ -10,7 +10,7 @@ use zasm::{
 use crate::{
     error::CompilerError,
     parser::{
-        ast::{Assign, BinOp, Call, Module as Mod, Node, Primitive, VariableDef},
+        ast::{Assign, BinOp, Call, Module as Mod, Node, Primitive, Return, VariableDef},
         ZResult,
     },
 };
@@ -54,6 +54,7 @@ impl<'guard> Compiler<'guard> {
             Node::VariableDef(var) => self.build_var(var),
             Node::Assign(ass) => self.build_assign(ass)?,
             Node::Call(call) => self.build_call(call),
+            Node::Return(ret) => self.build_return(ret),
             _ => panic!("Unknown node {:?}", node),
         }
 
@@ -74,6 +75,11 @@ impl<'guard> Compiler<'guard> {
         let reg = Operand::Reg(Reg::new("rsp"));
         self.builder
             .build_op(reg, Operand::Int((n_args * 8) as i32), Operator::Add);
+    }
+
+    fn build_return(&mut self, ret: Return) {
+        let operand = self.make_operand(*ret.value);
+        self.builder.build_return(operand);
     }
 
     fn build_assign(&mut self, assign: Assign) -> ZResult<()> {

@@ -11,6 +11,7 @@ pub struct Builder {
     registers: Vec<Reg>,
     offset: u32,
     reserved: u32,
+    label_count: u32,
 }
 
 pub struct Module<'guard> {

@@ -3,7 +3,7 @@ use std::{fs, io};
 use crate::{
     constants::PUTS_SOURCE,
     func::Function,
-    types::{Operator, Source, Store, StrPtr},
+    types::{Operator, StrPtr},
     Builder, Module,
 };
 
@@ -129,22 +129,8 @@ impl Builder {
             ],
             offset: 0,
             reserved: 0,
+            label_count: 0,
         }
-    }
-    pub fn build_mov<T, E>(&mut self, dest: T, src: E) -> T
-    where
-        T: Store + ToString,
-        E: Source + ToString,
-    {
-        let mut out = String::new();
-        out.push_str("mov ");
-        out.push_str(&dest.to_string());
-        out.push_str(", ");
-        out.push_str(&src.to_string());
-
-        self.buffer.push_str(&self.format(&out));
-
-        dest
     }
 
     fn get_value(&mut self, value: Operand) -> String {
@@ -187,6 +173,24 @@ impl Builder {
         let value = self.get_value(value);
         let out = format!("mov dword [rbp-{offset}], {value}", offset = var.0);
         self.buffer.push_str(&self.format(&out));
+    }
+
+    pub fn store_to_reg(&mut self, value: Operand, reg: Option<Reg>) -> Reg {
+        let reg = match reg {
+            Some(reg) => reg,
+            None => self.registers.pop().unwrap(),
+        };
+        let out = format!("mov {}, {}", reg.0, self.get_value(value));
+        self.buffer.push_str(&self.format(&out));
+
+        reg
+    }
+
+    pub fn build_return(&mut self, value: Operand) {
+        self.store_to_reg(value, Some(Reg::new("eax")));
+
+        let out = format!("jmp L{}", self.label_count);
+        self.buffer.push_str(&self.format(&out))
     }
 
     pub fn make_var(&mut self, value: Operand) -> Variable {
@@ -295,6 +299,12 @@ impl Builder {
     }
 
     pub fn write_to_fn(&mut self, f: &mut Function) {
+        let mut label = String::from("L");
+        label.push_str(&self.label_count.to_string());
+        self.label_count += 1;
+        label.push_str(":\n");
+        self.buffer.push_str(&label);
+
         f.write(&self.buffer);
         f.set_reserved(self.reserved * 4);
         self.buffer.clear();
