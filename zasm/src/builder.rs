@@ -3,7 +3,7 @@ use std::{fs, io};
 use crate::{
     constants::PUTS_SOURCE,
     func::Function,
-    types::{Operator, StrPtr},
+    types::{Jump, Label, Operator, StrPtr},
     Builder, Module,
 };
 
@@ -25,6 +25,12 @@ impl<'guard> Module<'guard> {
     }
 
     pub fn add_string(&mut self, string: &str) -> StrPtr {
+        let pos = self.strings.iter().position(|x| x == string);
+
+        if let Some(i) = pos {
+            return StrPtr::new(i);
+        }
+
         self.strings.push(string.to_owned());
         StrPtr::new(self.strings.len() - 1)
     }
@@ -189,7 +195,7 @@ impl Builder {
     pub fn build_return(&mut self, value: Operand) {
         self.store_to_reg(value, Some(Reg::new("eax")));
 
-        let out = format!("jmp L{}", self.label_count);
+        let out = format!("jmp .L{}", self.label_count);
         self.buffer.push_str(&self.format(&out))
     }
 
@@ -246,11 +252,12 @@ impl Builder {
         let opcode = match operation {
             Operator::Add => "add",
             Operator::Sub => "sub",
-            Operator::Mult => "mul",
-            Operator::Div => "div",
+            Operator::Mult => "imul",
+            Operator::Div => todo!(),
             Operator::DoubleEquals
             | Operator::Greater
             | Operator::GreaterEquals
+            | Operator::NotEquals
             | Operator::Less
             | Operator::LessEquals => {
                 compare = true;
@@ -269,6 +276,7 @@ impl Builder {
                 Operator::GreaterEquals => "setge",
                 Operator::Less => "setl",
                 Operator::LessEquals => "setle",
+                Operator::NotEquals => "setne",
                 _ => panic!(),
             };
 
@@ -287,6 +295,35 @@ impl Builder {
         self.registers.push(x);
     }
 
+    pub fn get_label(&mut self) -> Label {
+        let ret = Label::new(self.label_count);
+        self.label_count += 1;
+        ret
+    }
+
+    pub fn build_jump(&mut self, label: &Label, jmp: Jump) {
+        let out = format!("{} {}", jmp.to_string(), label.to_string());
+        self.buffer.push_str(&self.format(&out));
+    }
+
+    pub fn write_raw(&mut self, text: &str) {
+        self.buffer.push_str(text)
+    }
+
+    pub fn write_raw_fmt(&mut self, text: &str) {
+        let out = self.format(text);
+        self.buffer.push_str(&out);
+    }
+
+    pub fn insert_label(&mut self, label: &Label) {
+        self.buffer.push_str(&label.to_string());
+        self.buffer.push_str(":\n");
+    }
+
+    pub fn write(&mut self, text: &str) {
+        self.buffer.push_str(text)
+    }
+
     pub fn build_syscall(&mut self) {
         self.buffer.push_str(&self.format("syscall"));
     }
@@ -299,7 +336,7 @@ impl Builder {
     }
 
     pub fn write_to_fn(&mut self, f: &mut Function) {
-        let mut label = String::from("L");
+        let mut label = String::from(".L");
         label.push_str(&self.label_count.to_string());
         self.label_count += 1;
         label.push_str(":\n");

@@ -62,6 +62,7 @@ pub struct VariableDef {
 pub struct Constant {
     pub value: Primitive,
 }
+
 #[derive(Debug, PartialEq)]
 pub struct BinOp {
     pub left: Box<Node>,
@@ -111,6 +112,18 @@ pub enum Primitive {
     Str(String),
     Bool(bool),
     None,
+}
+
+impl ToString for Primitive {
+    fn to_string(&self) -> String {
+        match self {
+            Primitive::Int(i) => i.to_string(),
+            Primitive::Float(f) => f.to_string(),
+            Primitive::Str(s) => s.clone(),
+            Primitive::Bool(b) => b.to_string(),
+            Primitive::None => "".to_owned(),
+        }
+    }
 }
 
 impl Default for Primitive {

@@ -11,6 +11,7 @@ pub const DOT: char = '.';
 pub const COLON: char = ':';
 pub const SEMICOLON: char = ';';
 pub const FORWARD_SLASH: char = '/';
+pub const EXCLAMATION: char = '!';
 pub const BACKSLASH: char = '\\';
 pub const MINUS: char = '-';
 pub const PLUS: char = '+';
@@ -32,6 +33,8 @@ pub const INT: &str = "int";
 pub const FLOAT: &str = "float";
 pub const LOOP: &str = "loop";
 pub const BREAK: &str = "break";
+
+pub const ASM: &str = "__asm__";
 
 pub const TRUE: &str = "true";
 pub const FALSE: &str = "false";

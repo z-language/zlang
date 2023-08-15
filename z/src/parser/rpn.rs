@@ -65,6 +65,7 @@ fn precedence(op: &Operator) -> u32 {
         Operator::GreaterEquals => 1,
         Operator::Less => 1,
         Operator::LessEquals => 1,
+        Operator::NotEquals => 1,
     }
 }
 

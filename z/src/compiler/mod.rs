@@ -3,14 +3,15 @@ use std::collections::HashMap;
 use zasm::{
     builder::{Operand, Reg, Variable},
     func,
-    types::Operator,
+    types::{Jump, Label, Operator},
     Builder, Module,
 };
 
 use crate::{
     error::CompilerError,
+    grammar::ASM,
     parser::{
-        ast::{Assign, BinOp, Call, Module as Mod, Node, Primitive, Return, VariableDef},
+        ast::{Assign, BinOp, Call, If, Loop, Module as Mod, Node, Primitive, Return, VariableDef},
         ZResult,
     },
 };
@@ -19,6 +20,8 @@ pub struct Compiler<'guard> {
     module: Module<'guard>,
     builder: Builder,
     vars: HashMap<String, (Variable, bool)>,
+
+    current_labels: Vec<Label>,
 }
 
 impl<'guard> Compiler<'guard> {
@@ -55,13 +58,73 @@ impl<'guard> Compiler<'guard> {
             Node::Assign(ass) => self.build_assign(ass)?,
             Node::Call(call) => self.build_call(call),
             Node::Return(ret) => self.build_return(ret),
+            Node::If(case) => self.build_if(case)?,
+            Node::Loop(r#loop) => self.build_loop(r#loop)?,
+            Node::Break => self.build_break(),
             _ => panic!("Unknown node {:?}", node),
         }
 
         Ok(())
     }
 
+    fn build_if(&mut self, case: If) -> ZResult<()> {
+        // TODO: orelse
+        self.handle_node(*case.test)?;
+        self.builder.write_raw("    cmp eax, 1\n");
+
+        let label1 = self.builder.get_label();
+
+        self.builder.build_jump(&label1, Jump::NotEqual);
+        for node in case.run.body {
+            self.handle_node(node)?;
+        }
+
+        self.builder.insert_label(&label1);
+
+        Ok(())
+    }
+
+    fn build_loop(&mut self, r#loop: Loop) -> ZResult<()> {
+        let label_start = self.builder.get_label();
+        let label_end = self.builder.get_label();
+        self.current_labels.push(label_end);
+
+        self.builder.insert_label(&label_start);
+        for node in r#loop.body.body {
+            self.handle_node(node)?;
+        }
+        self.builder.build_jump(&label_start, Jump::Always);
+
+        self.builder.insert_label(
+            &self
+                .current_labels
+                .pop()
+                .expect("Label was pushed in same function."),
+        );
+        Ok(())
+    }
+
+    fn build_break(&mut self) {
+        let label = self.current_labels.last().unwrap();
+        self.builder.build_jump(label, Jump::Always);
+    }
+
+    fn build_inline_asm(&mut self, call: Call) {
+        for arg in call.args {
+            if let Node::Constant(constant) = arg {
+                let text = constant.value.to_string();
+                self.builder.write_raw_fmt(&text);
+            } else {
+                panic!("Only constants can be used in inline asm.")
+            }
+        }
+    }
+
     fn build_call(&mut self, mut call: Call) {
+        if call.func.id == ASM {
+            return self.build_inline_asm(call);
+        }
+
         let n_args = call.args.len();
         call.args.reverse();
         for arg in call.args {
@@ -88,7 +151,7 @@ impl<'guard> Compiler<'guard> {
         let var = self.vars.get(&assign.target).unwrap();
         // checks if var is mutable
         if !var.1 {
-            return Err(CompilerError::new(1, 2, 1, "Fuck"));
+            return Err(CompilerError::new(1, 2, 1, "Variable is imutable."));
         }
 
         self.builder.assign_var(value, &var.0);
@@ -115,6 +178,7 @@ impl<'guard> Compiler<'guard> {
             module: Module::new(),
             builder: Builder::new(),
             vars: HashMap::default(),
+            current_labels: vec![],
         }
     }
 
@@ -132,6 +196,10 @@ impl<'guard> Compiler<'guard> {
             Node::Name(name) => {
                 let var = self.vars.get(&name.id).unwrap().0.clone();
                 Operand::Var(var)
+            }
+            Node::Call(call) => {
+                self.build_call(call);
+                Operand::Reg(Reg::new("eax"))
             }
             oops => panic!("This can't be an operand: {:?}", oops),
         }

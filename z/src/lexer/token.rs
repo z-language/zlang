@@ -20,6 +20,7 @@ pub enum Type {
     DoubleDot,
     Comma,
     Equals,
+    Not,
 
     Primitive(Primitive),
 }

@@ -7,9 +7,11 @@ LINKER=ld
 ASSEMBLER=nasm
 ASSEMBLER_FLAGS=-felf64 -g
 
-BIN=main
-ASM_SOURCE=out.asm
-OBJECT=out.o
+BUILD_DIR=build
+
+BIN=$(BUILD_DIR)/main
+ASM_SOURCE=$(BUILD_DIR)/out.asm
+OBJECT=$(BUILD_DIR)/out.o
 
 all: build
 
@@ -26,6 +28,8 @@ $(OBJECT): $(ASM_SOURCE)
 
 $(ASM_SOURCE): $(ŽFILE)
 	cargo run -p z -- $^
+	# TODO: remove when compiler is fixed
+	mv out.asm $(BUILD_DIR)
 
 clean:
 	rm $(ASM_SOURCE) $(OBJECT) $(BIN)

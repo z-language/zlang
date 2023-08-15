@@ -188,12 +188,12 @@ impl<'guard> Iterator for Lexer<'guard> {
             }
             MINUS => tok_ok!(self, Type::Op(Operator::Sub)),
 
-            case if case.is_alphabetic() => {
+            case if case.is_alphabetic() || case == '_' => {
                 let mut word = String::from(case);
                 let column = self.column;
 
                 while let Some(current) = self.chars.peek() {
-                    if !current.is_alphanumeric() {
+                    if !current.is_alphanumeric() && *current != '_' {
                         break;
                     }
 
@@ -211,7 +211,14 @@ impl<'guard> Iterator for Lexer<'guard> {
                 )
             }
 
-            _ => return Some(Err(self.throw("Unexpeced char."))),
+            EXCLAMATION if *self.chars.peek()? == EQUALS => {
+                self.chars.next().expect("Shouldn't fail");
+                tok_ok!(self, Type::Op(Operator::NotEquals))
+            }
+
+            EXCLAMATION => tok_ok!(self, Type::Not),
+
+            _ => return Some(Err(self.throw("Unexpected char."))),
         };
 
         Some(tok)
