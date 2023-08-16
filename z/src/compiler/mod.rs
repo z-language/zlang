@@ -16,11 +16,28 @@ use crate::{
     },
 };
 
+struct InternalVar {
+    inner: Variable,
+    mutable: bool,
+    scope: u32,
+}
+
+impl InternalVar {
+    pub fn new(inner: Variable, mutable: bool, scope: u32) -> Self {
+        Self {
+            inner,
+            mutable,
+            scope,
+        }
+    }
+}
+
 pub struct Compiler<'guard> {
     module: Module<'guard>,
     builder: Builder,
-    vars: HashMap<String, (Variable, bool)>,
+    vars: HashMap<String, InternalVar>,
 
+    scope_depth: u32,
     current_labels: Vec<Label>,
 }
 
@@ -51,13 +68,13 @@ impl<'guard> Compiler<'guard> {
                 self.module.add_func(f);
             }
             Node::BinOp(binop) => {
-                let tmp = self.build_binop(binop);
+                let tmp = self.build_binop(binop)?;
                 self.builder.free_reg(tmp);
             }
-            Node::VariableDef(var) => self.build_var(var),
+            Node::VariableDef(var) => self.build_var(var)?,
             Node::Assign(ass) => self.build_assign(ass)?,
-            Node::Call(call) => self.build_call(call),
-            Node::Return(ret) => self.build_return(ret),
+            Node::Call(call) => self.build_call(call)?,
+            Node::Return(ret) => self.build_return(ret)?,
             Node::If(case) => self.build_if(case)?,
             Node::Loop(r#loop) => self.build_loop(r#loop)?,
             Node::Break => self.build_break(),
@@ -68,6 +85,7 @@ impl<'guard> Compiler<'guard> {
     }
 
     fn build_if(&mut self, case: If) -> ZResult<()> {
+        self.add_scope();
         // TODO: orelse
         self.handle_node(*case.test)?;
         self.builder.write_raw("    cmp eax, 1\n");
@@ -81,10 +99,22 @@ impl<'guard> Compiler<'guard> {
 
         self.builder.insert_label(&label1);
 
+        self.clear_scope();
         Ok(())
     }
 
+    fn add_scope(&mut self) {
+        self.scope_depth += 1;
+    }
+
+    fn clear_scope(&mut self) {
+        self.vars
+            .retain(|_, inner_var| inner_var.scope < self.scope_depth);
+        self.scope_depth -= 1;
+    }
+
     fn build_loop(&mut self, r#loop: Loop) -> ZResult<()> {
+        self.add_scope();
         let label_start = self.builder.get_label();
         let label_end = self.builder.get_label();
         self.current_labels.push(label_end);
@@ -101,6 +131,8 @@ impl<'guard> Compiler<'guard> {
                 .pop()
                 .expect("Label was pushed in same function."),
         );
+
+        self.clear_scope();
         Ok(())
     }
 
@@ -120,15 +152,15 @@ impl<'guard> Compiler<'guard> {
         }
     }
 
-    fn build_call(&mut self, mut call: Call) {
+    fn build_call(&mut self, mut call: Call) -> ZResult<()> {
         if call.func.id == ASM {
-            return self.build_inline_asm(call);
+            return Ok(self.build_inline_asm(call));
         }
 
         let n_args = call.args.len();
         call.args.reverse();
         for arg in call.args {
-            let value = self.make_operand(arg);
+            let value = self.make_operand(arg)?;
             self.builder.build_push(value);
         }
         self.builder.call_by_name(&call.func.id);
@@ -138,37 +170,54 @@ impl<'guard> Compiler<'guard> {
         let reg = Operand::Reg(Reg::new("rsp"));
         self.builder
             .build_op(reg, Operand::Int((n_args * 8) as i32), Operator::Add);
-    }
-
-    fn build_return(&mut self, ret: Return) {
-        let operand = self.make_operand(*ret.value);
-        self.builder.build_return(operand);
-    }
-
-    fn build_assign(&mut self, assign: Assign) -> ZResult<()> {
-        let value = self.make_operand(*assign.value);
-
-        let var = self.vars.get(&assign.target).unwrap();
-        // checks if var is mutable
-        if !var.1 {
-            return Err(CompilerError::new(1, 2, 1, "Variable is imutable."));
-        }
-
-        self.builder.assign_var(value, &var.0);
         Ok(())
     }
 
-    fn build_binop(&mut self, binop: BinOp) -> Reg {
-        let left = self.make_operand(*binop.left);
-        let right = self.make_operand(*binop.right);
-
-        self.builder.build_op(left, right, binop.op)
+    fn build_return(&mut self, ret: Return) -> ZResult<()> {
+        let operand = self.make_operand(*ret.value)?;
+        self.builder.build_return(operand);
+        Ok(())
     }
 
-    fn build_var(&mut self, var: VariableDef) {
-        let value = self.make_operand(*var.value);
-        let i = self.builder.make_var(value);
-        self.vars.insert(var.name, (i, var.mutable));
+    fn build_assign(&mut self, assign: Assign) -> ZResult<()> {
+        let value = self.make_operand(*assign.value)?;
+
+        let var = match self.vars.get(&assign.target) {
+            Some(var) => var,
+            None => {
+                return Err(CompilerError::new(
+                    1,
+                    1,
+                    1,
+                    &*format!("Variable '{}', not found in scope.", assign.target),
+                ))
+            }
+        };
+        // checks if var is mutable
+        if !var.mutable {
+            return Err(CompilerError::new(1, 2, 1, "Variable is imutable."));
+        }
+
+        self.builder.assign_var(value, &var.inner);
+        Ok(())
+    }
+
+    fn build_binop(&mut self, binop: BinOp) -> ZResult<Reg> {
+        let left = self.make_operand(*binop.left)?;
+        let right = self.make_operand(*binop.right)?;
+
+        Ok(self.builder.build_op(left, right, binop.op))
+    }
+
+    fn build_var(&mut self, var: VariableDef) -> ZResult<()> {
+        let value = self.make_operand(*var.value)?;
+        let inner = self.builder.make_var(value);
+        self.vars.insert(
+            var.name,
+            InternalVar::new(inner, var.mutable, self.scope_depth),
+        );
+
+        Ok(())
     }
 }
 
@@ -179,27 +228,38 @@ impl<'guard> Compiler<'guard> {
             builder: Builder::new(),
             vars: HashMap::default(),
             current_labels: vec![],
+            scope_depth: 0,
         }
     }
 
-    pub fn make_operand(&mut self, node: Node) -> Operand {
+    pub fn make_operand(&mut self, node: Node) -> ZResult<Operand> {
         match node {
             Node::Constant(c) => match c.value {
-                Primitive::Int(i) => Operand::Int(i),
+                Primitive::Int(i) => Ok(Operand::Int(i)),
                 Primitive::Str(str) => {
                     let ptr = self.module.add_string(&str);
-                    Operand::StrPtr(ptr)
+                    Ok(Operand::StrPtr(ptr))
                 }
                 _ => todo!("Support."),
             },
-            Node::BinOp(binop) => Operand::Reg(self.build_binop(binop)),
+            Node::BinOp(binop) => Ok(Operand::Reg(self.build_binop(binop)?)),
             Node::Name(name) => {
-                let var = self.vars.get(&name.id).unwrap().0.clone();
-                Operand::Var(var)
+                let var = match self.vars.get(&name.id) {
+                    Some(var) => var.inner.clone(),
+                    None => {
+                        return Err(CompilerError::new(
+                            1,
+                            1,
+                            1,
+                            &*format!("Variable '{}' not found in scope.", name.id),
+                        ))
+                    }
+                };
+                Ok(Operand::Var(var))
             }
             Node::Call(call) => {
-                self.build_call(call);
-                Operand::Reg(Reg::new("eax"))
+                self.build_call(call)?;
+                Ok(Operand::Reg(Reg::new("eax")))
             }
             oops => panic!("This can't be an operand: {:?}", oops),
         }
