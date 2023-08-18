@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.0.29", features = ["derive"] }
+regex = "1.9.3"
 zasm = { path="../zasm" }

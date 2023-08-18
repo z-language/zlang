@@ -1,4 +1,4 @@
-use std::fmt::{self, Display};
+use std::fmt;
 
 const LINE_PADDING: usize = 3;
 
@@ -10,7 +10,7 @@ pub struct CompilerError {
     message: String,
 }
 
-impl Display for CompilerError {
+impl fmt::Display for CompilerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.message)
     }

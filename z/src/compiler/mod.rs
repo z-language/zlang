@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use regex::{Captures, Regex};
 use zasm::{
     builder::{Operand, Reg, Variable},
     func,
@@ -9,13 +10,15 @@ use zasm::{
 
 use crate::{
     error::CompilerError,
-    grammar::ASM,
+    grammar,
+    lexer::token::SourcePos,
     parser::{
         ast::{Assign, BinOp, Call, If, Loop, Module as Mod, Node, Primitive, Return, VariableDef},
         ZResult,
     },
 };
 
+#[derive(Debug, Clone)]
 struct InternalVar {
     inner: Variable,
     mutable: bool,
@@ -36,8 +39,10 @@ pub struct Compiler<'guard> {
     module: Module<'guard>,
     builder: Builder,
     vars: HashMap<String, InternalVar>,
+    shadowed_vars: Vec<(String, InternalVar)>,
 
     scope_depth: u32,
+    has_main: bool,
     current_labels: Vec<Label>,
 }
 
@@ -48,6 +53,10 @@ impl<'guard> Compiler<'guard> {
 
         for node in source.body {
             self.handle_node(node)?;
+        }
+
+        if !self.has_main {
+            return Err(CompilerError::new(1, 1, 1, "Missing main function."));
         }
 
         self.module.write_to_file("out.asm").unwrap();
@@ -66,6 +75,10 @@ impl<'guard> Compiler<'guard> {
 
                 self.builder.write_to_fn(&mut f);
                 self.module.add_func(f);
+
+                if fun.name == grammar::F_MAIN {
+                    self.has_main = true;
+                }
             }
             Node::BinOp(binop) => {
                 let tmp = self.build_binop(binop)?;
@@ -77,7 +90,7 @@ impl<'guard> Compiler<'guard> {
             Node::Return(ret) => self.build_return(ret)?,
             Node::If(case) => self.build_if(case)?,
             Node::Loop(r#loop) => self.build_loop(r#loop)?,
-            Node::Break => self.build_break(),
+            Node::Break(br) => self.build_break(br)?,
             _ => panic!("Unknown node {:?}", node),
         }
 
@@ -110,7 +123,19 @@ impl<'guard> Compiler<'guard> {
     fn clear_scope(&mut self) {
         self.vars
             .retain(|_, inner_var| inner_var.scope < self.scope_depth);
+
         self.scope_depth -= 1;
+
+        let (unshadowed, shadowed): (_, Vec<_>) = self
+            .shadowed_vars
+            .clone()
+            .into_iter()
+            .partition(|e| e.1.scope == self.scope_depth);
+        self.shadowed_vars = shadowed;
+
+        for var in unshadowed {
+            self.vars.insert(var.0, var.1);
+        }
     }
 
     fn build_loop(&mut self, r#loop: Loop) -> ZResult<()> {
@@ -136,25 +161,53 @@ impl<'guard> Compiler<'guard> {
         Ok(())
     }
 
-    fn build_break(&mut self) {
-        let label = self.current_labels.last().unwrap();
+    fn build_break(&mut self, pos: SourcePos) -> ZResult<()> {
+        let label = match self.current_labels.last() {
+            Some(label) => label,
+            None => {
+                return Err(CompilerError::new(
+                    pos.line as usize,
+                    pos.column as usize,
+                    grammar::BREAK.len(),
+                    "Break used outside of loop.",
+                ))
+            }
+        };
         self.builder.build_jump(label, Jump::Always);
+        Ok(())
     }
 
-    fn build_inline_asm(&mut self, call: Call) {
+    fn build_inline_asm(&mut self, call: Call) -> ZResult<()> {
+        let re = Regex::new(r"\$[A-z]([A-z]|\d)+").expect("Failed to build regular expression.");
         for arg in call.args {
             if let Node::Constant(constant) = arg {
                 let text = constant.value.to_string();
-                self.builder.write_raw_fmt(&text);
+
+                let out = re
+                    .replace_all(&text, |caps: &regex::Captures| {
+                        let matched_text = &caps[0];
+                        match self.vars.get(&matched_text[1..]) {
+                            Some(var) => var.inner.clone(),
+                            None => return "".to_owned(),
+                        }
+                        .get_mem_location()
+                    })
+                    .to_string();
+
+                if out == "" {
+                    return Err(CompilerError::new(1, 1, 1, "Bruhhhh"));
+                }
+                self.builder.write_raw_fmt(&out);
             } else {
                 panic!("Only constants can be used in inline asm.")
             }
         }
+        Ok(())
     }
 
     fn build_call(&mut self, mut call: Call) -> ZResult<()> {
-        if call.func.id == ASM {
-            return Ok(self.build_inline_asm(call));
+        if call.func.id == grammar::F_ASM {
+            return Ok(self.build_inline_asm(call))?;
         }
 
         let n_args = call.args.len();
@@ -186,16 +239,21 @@ impl<'guard> Compiler<'guard> {
             Some(var) => var,
             None => {
                 return Err(CompilerError::new(
-                    1,
-                    1,
-                    1,
+                    assign.pos.line as usize,
+                    assign.pos.column as usize,
+                    assign.target.len(),
                     &*format!("Variable '{}', not found in scope.", assign.target),
                 ))
             }
         };
         // checks if var is mutable
         if !var.mutable {
-            return Err(CompilerError::new(1, 2, 1, "Variable is imutable."));
+            return Err(CompilerError::new(
+                assign.pos.line as usize,
+                assign.pos.column as usize,
+                assign.target.len(),
+                "Variable is imutable.",
+            ));
         }
 
         self.builder.assign_var(value, &var.inner);
@@ -212,10 +270,14 @@ impl<'guard> Compiler<'guard> {
     fn build_var(&mut self, var: VariableDef) -> ZResult<()> {
         let value = self.make_operand(*var.value)?;
         let inner = self.builder.make_var(value);
-        self.vars.insert(
-            var.name,
+        let old = self.vars.insert(
+            var.name.clone(),
             InternalVar::new(inner, var.mutable, self.scope_depth),
         );
+
+        if let Some(old) = old {
+            self.shadowed_vars.push((var.name, old));
+        }
 
         Ok(())
     }
@@ -229,6 +291,8 @@ impl<'guard> Compiler<'guard> {
             vars: HashMap::default(),
             current_labels: vec![],
             scope_depth: 0,
+            has_main: false,
+            shadowed_vars: vec![],
         }
     }
 
@@ -243,14 +307,14 @@ impl<'guard> Compiler<'guard> {
                 _ => todo!("Support."),
             },
             Node::BinOp(binop) => Ok(Operand::Reg(self.build_binop(binop)?)),
-            Node::Name(name) => {
+            Node::Name(name, pos) => {
                 let var = match self.vars.get(&name.id) {
                     Some(var) => var.inner.clone(),
                     None => {
                         return Err(CompilerError::new(
-                            1,
-                            1,
-                            1,
+                            pos.line as usize,
+                            pos.column as usize,
+                            name.id.len(),
                             &*format!("Variable '{}' not found in scope.", name.id),
                         ))
                     }

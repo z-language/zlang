@@ -1,3 +1,4 @@
+/// Symbols
 pub const OPEN_PAREN: char = '(';
 pub const CLOSED_PAREN: char = ')';
 pub const OPEN_CBR: char = '{';
@@ -23,6 +24,7 @@ pub const EQUALS: char = '=';
 pub const UNDERSCORE: char = '_';
 pub const COMMA: char = ',';
 
+/// Keywords
 pub const FUN: &str = "fun";
 pub const VAR: &str = "var";
 pub const MUT: &str = "mut";
@@ -34,7 +36,10 @@ pub const FLOAT: &str = "float";
 pub const LOOP: &str = "loop";
 pub const BREAK: &str = "break";
 
-pub const ASM: &str = "__asm__";
+/// Important functions
+pub const F_ASM: &str = "__asm__";
+pub const F_MAIN: &str = "main";
 
+/// Booleans
 pub const TRUE: &str = "true";
 pub const FALSE: &str = "false";

@@ -6,7 +6,7 @@ use super::ast::{
 };
 use super::{Parser, ZResult};
 use crate::error::MakeErr;
-use crate::lexer::token::{Keyword, Token, Type};
+use crate::lexer::token::{Keyword, SourcePos, Token, Type};
 use crate::lexer::Lexer;
 use crate::parser::rpn::shutting_yard;
 use zasm::types::Operator;
@@ -82,7 +82,7 @@ impl<'guard> Parser<'guard> {
                 Keyword::Var => Ok(Node::VariableDef(self.build_var()?)),
                 Keyword::If => Ok(Node::If(self.build_if()?)),
                 Keyword::Else => todo!(),
-                Keyword::Break => Ok(Node::Break),
+                Keyword::Break => Ok(Node::Break(tok.pos)),
                 Keyword::Loop => Ok(Node::Loop(self.build_loop()?)),
                 Keyword::Return => Ok(Node::Return(self.build_return()?)),
             },
@@ -108,7 +108,7 @@ impl<'guard> Parser<'guard> {
                     self.prev.value = Type::Op(Operator::Add);
                     Ok(Node::BinOp(self.build_binop(tok, None)?))
                 }
-                _ => Ok(Node::Name(Name { id: word.clone() })),
+                _ => Ok(Node::Name(Name { id: word.clone() }, tok.pos)),
             },
 
             Type::LBrace => Ok(Node::Scope(self.build_scope()?)),
@@ -329,6 +329,7 @@ impl<'guard> Parser<'guard> {
         Ok(Assign {
             target,
             value: Box::new(self.parse_node(current)?),
+            pos: name.pos,
         })
     }
 

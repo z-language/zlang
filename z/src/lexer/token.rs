@@ -47,8 +47,8 @@ pub enum Keyword {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct SourcePos {
-    line: u32,
-    column: u32,
+    pub line: u32,
+    pub column: u32,
 }
 
 impl SourcePos {

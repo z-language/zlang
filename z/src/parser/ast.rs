@@ -1,5 +1,10 @@
 use zasm::types;
 
+use crate::{
+    error::{CompilerError, MakeErr},
+    lexer::token::SourcePos,
+};
+
 #[derive(Debug, PartialEq)]
 pub struct Module {
     pub body: Vec<Node>,
@@ -51,7 +56,9 @@ pub struct Arg {
 pub struct Assign {
     pub target: String,
     pub value: Box<Node>,
+    pub pos: SourcePos,
 }
+
 #[derive(Debug, PartialEq)]
 pub struct VariableDef {
     pub name: String,
@@ -93,7 +100,7 @@ pub enum Node {
     Arg(Arg),
     Constant(Constant),
     BinOp(BinOp),
-    Name(Name),
+    Name(Name, SourcePos),
     Call(Call),
     If(If),
     Scope(Scope),
@@ -101,7 +108,7 @@ pub enum Node {
     Return(Return),
     List(List),
 
-    Break,
+    Break(SourcePos),
     None,
 }
 

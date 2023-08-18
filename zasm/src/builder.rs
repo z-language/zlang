@@ -83,6 +83,13 @@ pub enum Operand {
 
 #[derive(Debug)]
 pub struct Variable(u32);
+
+impl Variable {
+    pub fn get_mem_location(&self) -> String {
+        format!("[rbp-{}]", self.0)
+    }
+}
+
 #[derive(Debug)]
 pub struct Reg(String);
 
@@ -218,7 +225,7 @@ impl Builder {
     fn get_var(&mut self, var: &Variable) -> Reg {
         let reg = self.registers.pop().unwrap();
 
-        let out = format!("mov {}, [rbp-{}]", reg.0, var.0);
+        let out = format!("mov {}, {}", reg.0, var.get_mem_location());
         self.buffer.push_str(&self.format(&out));
 
         reg
