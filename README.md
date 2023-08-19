@@ -1,12 +1,12 @@
 # ŽLANG COMPILER
 
-This is a parser and a compiler for a flavor of the Ž programming language.
+This is a parser and a compiler for the Ž programming language.
 It's still in its early stages.
 
 Features:
 - [x] Tokenizer
 - [x] Parser
-- [x] Compiler
+- [x] Compiler (WIP)
 
 TODO:
 - [ ] Implement all operators
@@ -22,10 +22,11 @@ TODO:
 You define a function with the "fun" keyword. Note that every program needs a main function.
 ```kotlin
 fun foo(x: int, y: float) -> int {}
-// ^ this func takes in two args and returns an int
+//  ^^^ This function takes in two
+//      argumments and returns an int.
 
 fun foo2() {}
-// ^ by default functions return "none"
+//  ^^^^ By default functions return "none".
 ```
 ## Defining variables
 You define a variable with the "var" keyword. By default, all variables are immutable and to make a variable mutable add the "mut" keyword after the var keyword. Immutable variables have to be assigned at declaration, while mutable variables will, by default, be set to "none".
@@ -39,7 +40,7 @@ var i = 5_000_000
 var i
 //  ^ this returns an error
 var mut i
-//  ^ here, i is "none"
+//  ^^^ here, i is "none"
 ```
 
 ## Scope
@@ -79,9 +80,6 @@ else {}
 if cond {
     // ...
 }
-
-var i = if cond { "yes" } else { "no" }
-// Ternary operator example. 
 ```
 
 ## Strings
@@ -94,6 +92,7 @@ var path = "C:\\Drive\\something"
 //            ^ you can also escape an escape
 ```
 ### Function calls
+Function calls work as you might expect.
 ```rust
 foo(5, 6)
 test()
@@ -101,4 +100,55 @@ nice(5 + 9.2)
 ```
 
 ### Inline Assembly
-todo
+To write inline assembly, use the \_\_asm__ keyword. Call it like a function and pass strings as it's arguments. To reference a variable from your code, use the dollar ($) symbol. This is a hello world example:
+```kotlin
+var message = "Hello, World\n"
+var message_len = 13
+__asm__(
+    "mov rax, 1",
+    "mov rdi, 1",
+    "mov rsi, $message",
+    "mov rdx, $message_len",
+    "syscall",
+)
+```
+Output:
+```
+Hello, World
+```
+
+## Planned feautres
+
+### Structs
+```go
+struct Person {
+    name: string
+    age: int
+    married: bool
+}
+```
+
+### For loops
+
+### Modules
+```kotlin
+import foo
+
+fun main() {
+    foo.test()
+}
+```
+
+### Deref
+```kotlin
+var name = "Mark"
+assert_eq(*(name+2), "r")
+```
+
+### Errors
+
+### Arrays
+```kotlin
+var nums = [2, 4, 6]
+assert_eq(nums[1], 4)
+```
