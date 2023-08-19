@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use regex::{Captures, Regex};
+use regex::Regex;
 use zasm::{
     builder::{Operand, Reg, Variable},
     func,
@@ -69,11 +69,31 @@ impl<'guard> Compiler<'guard> {
             Node::FunctionDef(fun) => {
                 let mut f = func::Function::new(&fun.name);
 
+                let return_label = self.builder.get_label();
+                self.current_labels.clear();
+                self.current_labels.push(return_label);
+
+                let mut offset = 16;
+                for arg in fun.args {
+                    if let Node::Arg(arg) = arg {
+                        let inner = Variable::new(offset);
+                        offset += 8;
+
+                        let var = InternalVar::new(inner, false, self.scope_depth);
+                        self.vars.insert(arg.name, var);
+                    }
+                }
+
                 for node in fun.body {
                     self.handle_node(node)?;
                 }
 
-                self.builder.write_to_fn(&mut f);
+                self.builder.write_to_fn(
+                    &mut f,
+                    self.current_labels
+                        .first()
+                        .expect("Function return label not found."),
+                );
                 self.module.add_func(f);
 
                 if fun.name == grammar::F_MAIN {
@@ -228,7 +248,12 @@ impl<'guard> Compiler<'guard> {
 
     fn build_return(&mut self, ret: Return) -> ZResult<()> {
         let operand = self.make_operand(*ret.value)?;
-        self.builder.build_return(operand);
+        self.builder.build_return(
+            operand,
+            self.current_labels
+                .first()
+                .expect("Function return label was not found."),
+        );
         Ok(())
     }
 

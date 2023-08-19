@@ -99,3 +99,6 @@ foo(5, 6)
 test()
 nice(5 + 9.2)
 ```
+
+### Inline Assembly
+todo

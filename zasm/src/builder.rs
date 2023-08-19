@@ -7,6 +7,16 @@ use crate::{
     Builder, Module,
 };
 
+macro_rules! insert_offset {
+    ($offset:expr) => {
+        format!(
+            "rbp{}{}",
+            if $offset < 0 { '-' } else { '+' },
+            $offset.abs().to_string()
+        )
+    };
+}
+
 impl<'guard> Module<'guard> {
     pub fn new() -> Self {
         Self {
@@ -82,11 +92,16 @@ pub enum Operand {
 }
 
 #[derive(Debug)]
-pub struct Variable(u32);
+pub struct Variable(i32);
 
 impl Variable {
+    pub fn new(offset: i32) -> Self {
+        Self(offset)
+    }
+
     pub fn get_mem_location(&self) -> String {
-        format!("[rbp-{}]", self.0)
+        let offset_display = insert_offset!(self.0);
+        format!("[{}]", offset_display)
     }
 }
 
@@ -199,15 +214,15 @@ impl Builder {
         reg
     }
 
-    pub fn build_return(&mut self, value: Operand) {
+    pub fn build_return(&mut self, value: Operand, return_label: &Label) {
         self.store_to_reg(value, Some(Reg::new("eax")));
 
-        let out = format!("jmp .L{}", self.label_count);
+        let out = format!("jmp {}", return_label.to_string());
         self.buffer.push_str(&self.format(&out))
     }
 
     pub fn make_var(&mut self, value: Operand) -> Variable {
-        self.offset += 4;
+        self.offset -= 4;
         self.reserved += 1;
         let size = match value {
             Operand::Int(_) => "dword ",
@@ -217,9 +232,12 @@ impl Builder {
 
         let value = self.get_value(value);
 
-        let out = format!("mov {size}[rbp-{offset}], {value}", offset = self.offset);
+        let out = format!(
+            "mov {size}[{offset}], {value}",
+            offset = insert_offset!(self.offset)
+        );
         self.buffer.push_str(&self.format(&out));
-        Variable(self.offset)
+        Variable::new(self.offset)
     }
 
     fn get_var(&mut self, var: &Variable) -> Reg {
@@ -342,12 +360,9 @@ impl Builder {
         self.buffer.push_str(&self.format(&out));
     }
 
-    pub fn write_to_fn(&mut self, f: &mut Function) {
-        let mut label = String::from(".L");
-        label.push_str(&self.label_count.to_string());
-        self.label_count += 1;
-        label.push_str(":\n");
-        self.buffer.push_str(&label);
+    pub fn write_to_fn(&mut self, f: &mut Function, return_label: &Label) {
+        self.buffer.push_str(&return_label.to_string());
+        self.buffer.push_str(":\n");
 
         f.write(&self.buffer);
         f.set_reserved(self.reserved * 4);

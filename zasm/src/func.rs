@@ -1,8 +1,11 @@
+use crate::types::Label;
+
 pub struct Function {
     name: String,
     text: String,
     reserved: u32,
 }
+
 impl Function {
     pub fn new(name: &str) -> Self {
         Function {
