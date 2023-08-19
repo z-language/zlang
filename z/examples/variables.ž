@@ -3,5 +3,4 @@ fun main() {
     var mut mutableVar = 4
     var mut laterAssign
     laterAssign = "hello to \"mark\" C:\\Drive\\neki"
-    laterAssign
 }

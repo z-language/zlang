@@ -210,7 +210,7 @@ impl Builder {
 
     pub fn assign_var(&mut self, value: Operand, var: &Variable) {
         let value = self.get_value(value);
-        let out = format!("mov dword [rbp-{offset}], {value}", offset = var.0);
+        let out = format!("mov dword [rbp{offset}], {value}", offset = var.0);
         self.buffer.push_str(&self.format(&out));
     }
 

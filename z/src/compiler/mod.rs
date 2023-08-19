@@ -143,12 +143,16 @@ impl<'guard> Compiler<'guard> {
             self.handle_node(node)?;
         }
 
-        self.builder.build_jump(&label2, Jump::Always);
+        if *case.orelse != Node::None {
+            self.builder.build_jump(&label2, Jump::Always);
+        }
+
         self.builder.insert_label(&label1);
 
-        self.handle_node(*case.orelse)?;
-
-        self.builder.insert_label(&label2);
+        if *case.orelse != Node::None {
+            self.handle_node(*case.orelse)?;
+            self.builder.insert_label(&label2);
+        }
 
         self.clear_scope();
         Ok(())

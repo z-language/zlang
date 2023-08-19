@@ -11,6 +11,10 @@ pub struct Args {
     #[arg(long)]
     pub dry_run: bool,
 
+    /// Output generated asm
+    #[arg(long)]
+    pub asm: bool,
+
     /// Path to the output file
     #[arg(short, long, default_value_t = String::from("main.o"))]
     pub out: String,

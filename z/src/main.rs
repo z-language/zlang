@@ -39,15 +39,21 @@ fn main() {
         Err(err) => return err.display(&source),
     };
 
+    if args.dry_run {
+        return;
+    }
+
+    let tmp_file = if args.asm { "out.asm" } else { TEMPFILE };
+
     module
-        .write_to_file(TEMPFILE)
+        .write_to_file(tmp_file)
         .expect("Failed to write to tempfile.");
     Command::new("nasm")
         .arg("-felf64")
         .arg("-g")
         .arg("-o")
         .arg(args.out)
-        .arg(TEMPFILE)
+        .arg(tmp_file)
         .spawn()
         .expect("Failed to run nasm.");
 }
