@@ -13,7 +13,10 @@ use crate::{
     grammar,
     lexer::token::SourcePos,
     parser::{
-        ast::{Assign, BinOp, Call, If, Loop, Module as Mod, Node, Primitive, Return, VariableDef},
+        ast::{
+            Assign, BinOp, Call, If, Loop, Module as Mod, Node, Primitive, Return, Scope,
+            VariableDef,
+        },
         ZResult,
     },
 };
@@ -100,6 +103,7 @@ impl<'guard> Compiler<'guard> {
                     self.has_main = true;
                 }
             }
+            Node::Scope(scope) => self.build_scope(scope)?,
             Node::BinOp(binop) => {
                 let tmp = self.build_binop(binop)?;
                 self.builder.free_reg(tmp);
@@ -117,20 +121,36 @@ impl<'guard> Compiler<'guard> {
         Ok(())
     }
 
+    fn build_scope(&mut self, scope: Scope) -> ZResult<()> {
+        self.add_scope();
+
+        for node in scope.body {
+            self.handle_node(node)?;
+        }
+
+        self.clear_scope();
+        Ok(())
+    }
+
     fn build_if(&mut self, case: If) -> ZResult<()> {
         self.add_scope();
-        // TODO: orelse
         self.handle_node(*case.test)?;
         self.builder.write_raw("    cmp eax, 1\n");
 
         let label1 = self.builder.get_label();
+        let label2 = self.builder.get_label();
 
         self.builder.build_jump(&label1, Jump::NotEqual);
         for node in case.run.body {
             self.handle_node(node)?;
         }
 
+        self.builder.build_jump(&label2, Jump::Always);
         self.builder.insert_label(&label1);
+
+        self.handle_node(*case.orelse)?;
+
+        self.builder.insert_label(&label2);
 
         self.clear_scope();
         Ok(())
