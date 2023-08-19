@@ -6,7 +6,7 @@ use super::ast::{
 };
 use super::{Parser, ZResult};
 use crate::error::MakeErr;
-use crate::lexer::token::{Keyword, SourcePos, Token, Type};
+use crate::lexer::token::{Keyword, Token, Type};
 use crate::lexer::Lexer;
 use crate::parser::rpn::shutting_yard;
 use zasm::types::Operator;
@@ -69,7 +69,7 @@ impl<'guard> Parser<'guard> {
         let prev_value = self.prev.value.clone();
         self.prev = tok.clone();
 
-        let ret = match tok.value {
+        match tok.value {
             Type::Primitive(_) if matches!(peek!(self).value, Type::Op(_)) => {
                 Ok(Node::BinOp(self.build_binop(tok, None)?))
             }
@@ -116,16 +116,12 @@ impl<'guard> Parser<'guard> {
 
             Type::Nl => {
                 let token = next!(self);
-                return self.parse_node(token);
+                self.parse_node(token)
             }
-            _ => {
-                return Err(tok
-                    .clone()
-                    .into_err(&*format!("Unexpected token: {:?}", tok)))
-            }
-        };
-
-        ret
+            _ => Err(tok
+                .clone()
+                .into_err(&format!("Unexpected token: {:?}", tok))),
+        }
     }
 
     fn build_list(&mut self) -> ZResult<List> {
@@ -288,12 +284,8 @@ impl<'guard> Parser<'guard> {
 
         if current.value == Type::Equals {
             assigning = true;
-        } else {
-            if !mutable {
-                return Err(
-                    current.into_err("Immutable variables have to be assigned at declaration.")
-                );
-            }
+        } else if !mutable {
+            return Err(current.into_err("Immutable variables have to be assigned at declaration."));
         }
 
         let value = if !assigning {
@@ -418,28 +410,28 @@ impl<'guard> Parser<'guard> {
         loop {
             let part = match current.value {
                 Type::Op(op) => {
-                    if expr_unordered.len() != 0 {
+                    if !expr_unordered.is_empty() {
                         next!(self);
                     }
                     ExprPart::Operator(op)
                 }
 
                 Type::Primitive(_) => {
-                    if expr_unordered.len() != 0 {
+                    if !expr_unordered.is_empty() {
                         next!(self);
                     }
                     ExprPart::Operand(Node::Constant(self.build_constant(current)?))
                 }
 
                 Type::Word(_) => {
-                    if expr_unordered.len() != 0 {
+                    if !expr_unordered.is_empty() {
                         next!(self);
                     }
                     ExprPart::Operand(self.parse_node(current)?)
                 }
 
                 Type::LParen => {
-                    if expr_unordered.len() != 0 {
+                    if !expr_unordered.is_empty() {
                         next!(self);
                     }
                     need_closing += 1;
@@ -449,7 +441,7 @@ impl<'guard> Parser<'guard> {
                     if need_closing == 0 {
                         break;
                     }
-                    if expr_unordered.len() != 0 {
+                    if !expr_unordered.is_empty() {
                         next!(self);
                     }
                     need_closing -= 1;

@@ -9,7 +9,7 @@ pub fn shutting_yard(toks: Vec<ExprPart>) -> Result<Vec<ExprPart>, CompilerError
     for token in toks {
         match token {
             ExprPart::Operator(operator) => {
-                while operator_stack.len() > 0 {
+                while !operator_stack.is_empty() {
                     let top = operator_stack.last().unwrap();
                     match top {
                         ExprPart::Operator(o2) => {
@@ -36,10 +36,11 @@ pub fn shutting_yard(toks: Vec<ExprPart>) -> Result<Vec<ExprPart>, CompilerError
                             return Err(CompilerError::new(0, 0, 1, "TODO: Mismatched parentheses"))
                         }
                     };
-                    match top {
-                        ExprPart::Lpar => break,
-                        _ => (),
+
+                    if top == &ExprPart::Lpar {
+                        break;
                     }
+
                     output.push(operator_stack.pop().unwrap());
                 }
                 operator_stack.pop().unwrap();

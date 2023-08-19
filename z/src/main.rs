@@ -3,9 +3,12 @@ mod args;
 use args::Args;
 use clap::Parser;
 use std::fs;
+use std::process::Command;
 use z::compiler::Compiler as zCompiler;
 use z::lexer::Lexer as zLexer;
 use z::parser::Parser as zParser;
+
+const TEMPFILE: &str = "/tmp/.zcompiled";
 
 fn main() {
     let mut parser = zParser::new();
@@ -31,8 +34,20 @@ fn main() {
         return;
     }
 
-    match compiler.compile(module) {
-        Ok(_) => (),
+    let module = match compiler.compile(module) {
+        Ok(module) => module,
         Err(err) => return err.display(&source),
-    }
+    };
+
+    module
+        .write_to_file(TEMPFILE)
+        .expect("Failed to write to tempfile.");
+    Command::new("nasm")
+        .arg("-felf64")
+        .arg("-g")
+        .arg("-o")
+        .arg(args.out)
+        .arg(TEMPFILE)
+        .spawn()
+        .expect("Failed to run nasm.");
 }

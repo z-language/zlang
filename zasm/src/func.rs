@@ -1,5 +1,3 @@
-use crate::types::Label;
-
 pub struct Function {
     name: String,
     text: String,
@@ -19,7 +17,7 @@ impl Function {
         self.text.push_str(text)
     }
 
-    pub fn name<'a>(&'a self) -> &'a str {
+    pub fn name(&self) -> &str {
         &self.name
     }
 
@@ -30,7 +28,7 @@ impl Function {
 
 impl ToString for Function {
     fn to_string(&self) -> String {
-        let mut out = String::from(self.name.to_owned());
+        let mut out = self.name.to_owned();
         out.push_str(":\n");
         out.push_str("    push rbp\n");
         out.push_str("    mov rbp, rsp\n");

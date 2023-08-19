@@ -3,7 +3,7 @@ pub struct StrPtr(usize);
 
 impl ToString for StrPtr {
     fn to_string(&self) -> String {
-        format!("str_{}", self.0.to_string())
+        format!("str_{}", self.0)
     }
 }
 impl StrPtr {

@@ -4,12 +4,13 @@ use crate::{
 };
 use zasm::types::Operator;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub enum Type {
     Keyword(Keyword),
     Word(String),
     LParen,
     RParen,
+    #[default]
     Nl,
     LBrace,
     RBrace,
@@ -23,12 +24,6 @@ pub enum Type {
     Not,
 
     Primitive(Primitive),
-}
-
-impl Default for Type {
-    fn default() -> Self {
-        Type::Nl
-    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -65,9 +60,9 @@ pub struct Token {
 
 impl Default for Token {
     fn default() -> Self {
-        Self {
+        Token {
             pos: SourcePos::new(1, 1),
-            value: Default::default(),
+            value: Type::default(),
         }
     }
 }

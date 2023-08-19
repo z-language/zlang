@@ -31,8 +31,8 @@ pub const MUT: &str = "mut";
 pub const RETURN: &str = "return";
 pub const IF: &str = "if";
 pub const ELSE: &str = "else";
-pub const INT: &str = "int";
-pub const FLOAT: &str = "float";
+// pub const INT: &str = "int";
+// pub const FLOAT: &str = "float";
 pub const LOOP: &str = "loop";
 pub const BREAK: &str = "break";
 

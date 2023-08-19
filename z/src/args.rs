@@ -12,6 +12,6 @@ pub struct Args {
     pub dry_run: bool,
 
     /// Path to the output file
-    #[arg(short, long, default_value_t = String::from("main"))]
+    #[arg(short, long, default_value_t = String::from("main.o"))]
     pub out: String,
 }

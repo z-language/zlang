@@ -1,9 +1,6 @@
 use zasm::types;
 
-use crate::{
-    error::{CompilerError, MakeErr},
-    lexer::token::SourcePos,
-};
+use crate::lexer::token::SourcePos;
 
 #[derive(Debug, PartialEq)]
 pub struct Module {
@@ -112,12 +109,14 @@ pub enum Node {
     None,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub enum Primitive {
     Int(i32),
     Float(f32),
     Str(String),
     Bool(bool),
+
+    #[default]
     None,
 }
 
@@ -130,11 +129,5 @@ impl ToString for Primitive {
             Primitive::Bool(b) => b.to_string(),
             Primitive::None => "".to_owned(),
         }
-    }
-}
-
-impl Default for Primitive {
-    fn default() -> Self {
-        Primitive::None
     }
 }

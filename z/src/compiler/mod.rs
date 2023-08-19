@@ -50,7 +50,7 @@ pub struct Compiler<'guard> {
 }
 
 impl<'guard> Compiler<'guard> {
-    pub fn compile(&mut self, source: Mod) -> ZResult<()> {
+    pub fn compile(&mut self, source: Mod) -> ZResult<&Module> {
         self.module = Module::new();
         self.builder = Builder::new();
 
@@ -62,9 +62,7 @@ impl<'guard> Compiler<'guard> {
             return Err(CompilerError::new(1, 1, 1, "Missing main function."));
         }
 
-        self.module.write_to_file("out.asm").unwrap();
-
-        Ok(())
+        Ok(&self.module)
     }
 
     fn handle_node(&mut self, node: Node) -> ZResult<()> {
@@ -234,7 +232,7 @@ impl<'guard> Compiler<'guard> {
                     })
                     .to_string();
 
-                if out == "" {
+                if out.is_empty() {
                     return Err(CompilerError::new(1, 1, 1, "Bruhhhh"));
                 }
                 self.builder.write_raw_fmt(&out);
@@ -287,7 +285,7 @@ impl<'guard> Compiler<'guard> {
                     assign.pos.line as usize,
                     assign.pos.column as usize,
                     assign.target.len(),
-                    &*format!("Variable '{}', not found in scope.", assign.target),
+                    &format!("Variable '{}', not found in scope.", assign.target),
                 ))
             }
         };
@@ -360,7 +358,7 @@ impl<'guard> Compiler<'guard> {
                             pos.line as usize,
                             pos.column as usize,
                             name.id.len(),
-                            &*format!("Variable '{}' not found in scope.", name.id),
+                            &format!("Variable '{}' not found in scope.", name.id),
                         ))
                     }
                 };

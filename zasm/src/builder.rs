@@ -17,6 +17,17 @@ macro_rules! insert_offset {
     };
 }
 
+impl<'guard> Default for Module<'guard> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl Default for Builder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'guard> Module<'guard> {
     pub fn new() -> Self {
         Self {
@@ -110,7 +121,7 @@ pub struct Reg(String);
 
 impl Clone for Variable {
     fn clone(&self) -> Self {
-        Self(self.0.clone())
+        Self(self.0)
     }
 }
 
