@@ -72,3 +72,33 @@ impl MakeErr for Token {
         CompilerError::new(self.pos.line as usize, self.pos.column as usize, 1, message)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pos;
+
+    #[test]
+    fn test_default() {
+        let t = Token::default();
+        let expected = Token {
+            pos: pos!(1, 1),
+            value: Type::Nl,
+        };
+
+        assert_eq!(t, expected);
+    }
+
+    #[test]
+    fn test_make_err() {
+        let t = Token {
+            pos: pos!(2, 5),
+            value: Type::Arrow,
+        };
+        let message = "Test error.";
+        let test_case = t.into_err(message);
+        let expected = CompilerError::new(5, 2, 1, message);
+
+        assert_eq!(test_case, expected)
+    }
+}

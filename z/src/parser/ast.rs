@@ -131,3 +131,15 @@ impl ToString for Primitive {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Primitive;
+
+    #[test]
+    fn test_primitive() {
+        let t = Primitive::Float(5.2);
+
+        assert_eq!(&t.to_string(), "5.2")
+    }
+}

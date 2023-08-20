@@ -1,6 +1,6 @@
 fun main() {
-    var greeting = 3
+    var greeting = 1
     var mut mutableVar = 4
-    var mut laterAssign
-    laterAssign = "hello to \"mark\" C:\\Drive\\neki"
+    // var mut laterAssign
+    // laterAssign = "hello to \"mark\" C:\\Drive\\neki"
 }

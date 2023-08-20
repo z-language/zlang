@@ -63,13 +63,16 @@ impl<'guard> Iterator for Lexer<'guard> {
             COMMA => tok_ok!(self, Type::Comma),
             OPEN_BR => tok_ok!(self, Type::LBracket),
             CLOSED_BR => tok_ok!(self, Type::RBracket),
-            NL | SEMICOLON => {
-                let ret = tok_ok!(self, Type::Nl);
+            NL => {
+                let ret = tok_ok!(self, Type::default());
                 self.line += 1;
                 self.column = 0;
 
                 return Some(ret);
             }
+
+            SEMICOLON => tok_ok!(self, Type::default()),
+
             SPACE => return self.next(),
             DOUBLE_QUOTES => {
                 let mut word = String::new();
@@ -273,7 +276,12 @@ impl<'guard> Default for Lexer<'guard> {
 mod tests {
     use crate::parser::ast::Primitive;
 
-    use super::{token::SourcePos, token::Token, token::Type, Lexer};
+    use super::{
+        token::SourcePos,
+        token::Type,
+        token::{Keyword, Token},
+        Lexer,
+    };
 
     #[test]
     fn test_symbols() {
@@ -309,5 +317,30 @@ mod tests {
         for token in expected {
             assert_eq!(token, lexer.next().unwrap().unwrap());
         }
+    }
+
+    #[test]
+    fn test_main() {
+        let test_case = "fun main() -> int { return 0; }\n";
+        let lexer = Lexer::from(test_case);
+
+        let expected = [
+            token!(pos!(1, 1), Type::Keyword(Keyword::Fun)),
+            token!(pos!(5, 1), Type::Word("main".to_owned())),
+            token!(pos!(9, 1), Type::LParen),
+            token!(pos!(10, 1), Type::RParen),
+            token!(pos!(12, 1), Type::Arrow),
+            token!(pos!(15, 1), Type::Word("int".to_owned())),
+            token!(pos!(19, 1), Type::LBrace),
+            token!(pos!(21, 1), Type::Keyword(Keyword::Return)),
+            token!(pos!(28, 1), Type::Primitive(Primitive::Int(0))),
+            token!(pos!(29, 1), Type::default()),
+            token!(pos!(31, 1), Type::RBrace),
+            token!(pos!(32, 1), Type::default()),
+        ];
+
+        lexer
+            .enumerate()
+            .for_each(|(i, e)| assert_eq!(e.unwrap(), expected[i]));
     }
 }

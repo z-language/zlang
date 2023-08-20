@@ -54,3 +54,16 @@ impl ToString for Jump {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Label;
+
+    #[test]
+    fn test_labels() {
+        let index = 4;
+        let l = Label::new(index);
+
+        assert_eq!(l.to_string(), format!(".L{}", index))
+    }
+}

@@ -2,7 +2,7 @@ use std::fmt;
 
 const LINE_PADDING: usize = 3;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CompilerError {
     line: usize,
     pos: usize,
