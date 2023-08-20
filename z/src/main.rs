@@ -43,10 +43,18 @@ fn main() {
         return;
     }
 
-    let tmp_file = if args.asm { "out.asm" } else { TEMPFILE };
+    let tmp_file = if let Some(file) = args.asm {
+        if file.is_empty() {
+            "out.asm".to_owned()
+        } else {
+            file
+        }
+    } else {
+        TEMPFILE.to_owned()
+    };
 
     module
-        .write_to_file(tmp_file)
+        .write_to_file(&tmp_file)
         .expect("Failed to write to tempfile.");
     Command::new("nasm")
         .arg("-felf64")

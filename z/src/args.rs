@@ -13,7 +13,7 @@ pub struct Args {
 
     /// Output generated asm
     #[arg(long)]
-    pub asm: bool,
+    pub asm: Option<String>,
 
     /// Path to the output file
     #[arg(short, long, default_value_t = String::from("main.o"))]

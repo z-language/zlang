@@ -4,9 +4,6 @@ DEBUG_SOURCE_DIR=z/debug
 ŽFILE=$(DEBUG_SOURCE_DIR)/testing.ž
 
 LINKER=ld
-ASSEMBLER=nasm
-ASSEMBLER_FLAGS=-felf64 -g
-
 BUILD_DIR=build
 
 BIN=$(BUILD_DIR)/main
@@ -23,13 +20,9 @@ build: $(BIN)
 $(BIN): $(OBJECT)
 	$(LINKER) -o $@ $^
 
-$(OBJECT): $(ASM_SOURCE)
-	$(ASSEMBLER) $(ASSEMBLER_FLAGS) -o $@ $^
-
-$(ASM_SOURCE): $(ŽFILE)
-	cargo run -p z -- $^
-	# TODO: remove when compiler is fixed
-	mv out.asm $(BUILD_DIR)
+$(OBJECT): $(ŽFILE)
+	cargo build
+	./target/debug/z --asm $(ASM_SOURCE) -o $@ $^
 
 clean:
 	rm $(ASM_SOURCE) $(OBJECT) $(BIN)
